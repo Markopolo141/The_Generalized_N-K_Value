@@ -11,13 +11,12 @@ from utils import *
 @click.argument('bound_data', type=click.File('rb'))
 @click.argument('output_data', type=click.File('wb'))
 def run(exact_data, stat_data, bound_data, output_data):
-	pdb.set_trace()
 	exact = json.load(exact_data)
 	stat = json.load(stat_data)
 	bound = json.load(bound_data)
 	exact_data.close()
 	stat_data.close()
-	bound_data.close
+	bound_data.close()
 	
 	#normalising all the data
 	for a in [stat,bound]:
@@ -48,7 +47,7 @@ def run(exact_data, stat_data, bound_data, output_data):
 	final_data = [[bound[i][0],stat[i][1],bound[i][1]] for i in range(len(stat))]
 	output_data.open()
 	json.dump(final_data,output_data)
-	output.data.close()
+	output_data.close()
 
 
 

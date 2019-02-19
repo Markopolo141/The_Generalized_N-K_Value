@@ -101,6 +101,30 @@ def gen3(l,i,N,gen_list):
 
 
 
+def simple(N,m):
+	mm = [[0 for i in range(N)] for ii in range(N)]
+	ss = [[0 for i in range(N)] for ii in range(N)]
+	for i in range(0,m-N,N):
+		vector = list(range(N))
+		shuffle(vector)
+		for ii,vv in enumerate(vector): #size ii, player vv
+			mm[ii][vv] += v(vector[0:ii+1],N)-v(vector[0:ii],N)
+			ss[ii][vv] += 1
+	vector = list(range(N))
+	shuffle(vector)
+	indices = list(range(N))
+	for i in range(m%N):
+		ind = indices.pop(int(random()*(len(indices))))
+		vector_index = vector.index(ind)
+		mm[vector_index][ind] += v(vector[0:vector_index+1],N)-v(vector[0:vector_index],N)
+		ss[vector_index][ind] += 1
+	for i in range(N):
+		for ii in range(N):
+			mm[i][ii] = mm[i][ii]/ss[i][ii] if ss[i][ii]>0 else 0
+	mm = [sum([mm[o][i] for o in range(N)])/N for i in range(N)]
+	return mm
+
+
 def castro(N,m):
 	m1exp = int(floor(m*1.0/(2*N**2)))
 	s = [[0.0 for i in range(N)] for i in range(N)]
@@ -206,7 +230,7 @@ def burgess_bound(N,ni,Ni,var,d,r):
 	return sum([min(A[0][i],A[1][i]) for i in range(N)])
 
 
-def burgess(N,m,d,r=0.5):
+def burgess(N,m,d=1.0,r=0.5):
 	ni = [[0 for i in range(N)] for i in range(N)]
 	Ni = [factorial(N-1)/(factorial(N-1-i)*factorial(i)) for i in range(N)]
 	listsi = [[] for i in range(N)]
@@ -267,7 +291,7 @@ def burgess(N,m,d,r=0.5):
 			ss[i] += s[i][o]/ni[i][o]
 	for i in range(N):
 		ss[i] /= N
-	return ss,sqrt(bound*log(2.0/r)*0.5)
+	return ss#,sqrt(bound*log(2.0/r)*0.5)
 
 
 
@@ -279,6 +303,7 @@ import click
 import json
 
 @click.command()
+@click.argument('method', type=click.Choice(['burgess', 'castro', 'maleki', 'simple']))
 @click.argument('input_file', type=click.File('rb'))
 @click.argument('output_file', type=click.File('wb'))
 @click.argument('sample_start', type=click.INT)
@@ -286,7 +311,7 @@ import json
 @click.argument('sample_step', type=click.INT)
 @click.argument('repeats', type=click.INT)
 @click.option('--inds_data', type=click.File('rb'))
-def run(input_file, output_file, sample_start, sample_finish, sample_step, repeats,inds_data):
+def run(method, input_file, output_file, sample_start, sample_finish, sample_step, repeats,inds_data):
 	if inds_data is not None:
 		inds_data_ = json.load(inds_data)
 		inds_data.close()
@@ -299,19 +324,20 @@ def run(input_file, output_file, sample_start, sample_finish, sample_step, repea
 	shared.setConst(bignum=99999)
 	nss = len(ppc['bus'])
 	data = []
+	method = eval(method)
 	for depth in range(sample_start, sample_finish, sample_step):#tqdm.tqdm(range(1,66)):
 		data.append([])
 		for ii in range(repeats):
 			calculate_inds, calc = make_calculator(ppc)
 			mem_inds['_counter_inds']=[]
 			try:
-				cc = burgess(nss,depth,1.0)
+				cc = method(nss,depth)
 			except Exception as e:
 				print e
 				del data[-1]
 				break
-			print 2*len(mem_inds['_counter_inds'])-1,depth,cc[0]
-			data[-1].append((2*len(mem_inds['_counter_inds'])-1,depth,cc[0]))
+			print 2*len(mem_inds['_counter_inds'])-1,depth,cc
+			data[-1].append((2*len(mem_inds['_counter_inds'])-1,depth,cc))
 	output_file.write(json.dumps(data).replace("]","]\n"))
 	output_file.close()
 		
