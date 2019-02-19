@@ -10,7 +10,7 @@ def run(data_file):
 	data = json.load(data_file)
 	data_file.close()
 	for d in data:
-		print ",".join([str(dd) for dd in d])
+		print "({})".format(",".join([str(dd) for dd in d]))
 
 
 if __name__ == '__main__':
