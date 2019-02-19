@@ -83,7 +83,6 @@ def gen2(l,i,N):
 	r = list(range(N))
 	r.remove(i)
 	shuffle(r)
-	g = [i]+r[0:l]
 	return v(g+[i],N)-v(g,N)
 
 def gen3(l,i,N,gen_list):
