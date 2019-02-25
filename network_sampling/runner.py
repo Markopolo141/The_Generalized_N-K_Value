@@ -21,7 +21,6 @@ def run(f):
 	print "--- Solving Network via stratified statistics:CASTRO"
 	os.system("python bounds_solver.py castro {}.json bound_castro{}out.json 180 1700 10 100 --inds_data=inds{}.json".format(f,f,f))
 	print "--- Collating all statistical outcomes"
-	#os.system("python data_collator.py solved{}out.json stat{}out.json bound{}out.json final{}out.json".format(f,f,f,f))
 	os.system("python data_renderer.py solved{}out.json stat{}out.json ./processed/stat{}.json".format(f,f,f))
 	os.system("python data_renderer.py solved{}out.json bound_burgess{}out.json ./processed/burgess{}.json".format(f,f,f))
 	os.system("python data_renderer.py solved{}out.json bound_simple{}out.json ./processed/simple{}.json".format(f,f,f))
