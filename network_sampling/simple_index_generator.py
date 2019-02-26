@@ -82,10 +82,13 @@ def simple_generate_indices(nss,samples):
 	if samples>sum(maxs):
 		return get_inds(nss,maxs)
 	i=0
+	j=0
 	while(sum(s)<samples):
 		if (s[i]<maxs[i]):
 			s[i]+=1
-		i= (i+1)%(nss/2+1)
-	#print samples,s
+		i=i+1
+		if (i==nss/2 and nss%2==0 and j==1) or i==nss/2+1:
+			i=0
+			j=1-j
 	return get_inds(nss,s)
 
