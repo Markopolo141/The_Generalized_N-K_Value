@@ -266,7 +266,7 @@ def maleki(N,m):
 				ni[N-l-1][i] += 1
 	for l in range(N):
 		for i in range(N):
-			s[l][i] = s[l][i]*1.0/ni[l][i]
+			s[l][i] = s[l][i]*1.0/ni[l][i] if ni[l][i]>0 else 0
 	ss = [0.0 for i in range(N)]
 	for l in range(N):
 		for i in range(N):
