@@ -33,8 +33,8 @@ def run(input_file, output_file, sample_start, sample_finish, sample_step, repea
 		for ii in range(repeats):
 			calculate_inds, calc = make_calculator(ppc)
 			mem_inds['_counter_inds']=[]
-			#indices = simple_generate_indices(nss, depth)
-			indices = generate_indices(nss, depth)
+			indices = simple_generate_indices(nss, depth)
+			#indices = generate_indices(nss, depth)
 			calculate_inds(indices)
 			cc = calc()
 			print 2*len(mem_inds['_counter_inds'])-1,depth,cc[0]

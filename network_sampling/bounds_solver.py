@@ -208,6 +208,9 @@ def castro(N,m):
 				extra_ni[N-l-1][i] += 1
 	for l in range(0,N):
 		for i in range(N):
+			if ni[l][i]==0:
+				print "help"
+				continue
 			s[l][i] = s[l][i]*1.0/ni[l][i]
 	ss = [0.0 for i in range(N)]
 	for l in range(N):
@@ -396,18 +399,19 @@ def run(method, input_file, output_file, sample_start, sample_finish, sample_ste
 			reset_sampling(nss)
 			mem_inds['_counter_inds']=[]
 		for jj,depth in enumerate(range(sample_start, sample_finish, sample_step)):#tqdm.tqdm(range(1,66)):
-			if method_name!="burgess":
-				reset_sampling(nss)
-				mem_inds['_counter_inds']=[]
-			calculate_inds, calc = make_calculator(ppc)
-			try:
-				cc = method(nss,depth)
-			except Exception as e:
-				print e
-				data[jj]=None
-				break
-			print 2*len(mem_inds['_counter_inds'])-1,depth,cc
-			data[jj].append((2*len(mem_inds['_counter_inds'])-1,depth,cc))
+			if data[jj] is not None:
+				if method_name!="burgess":
+					reset_sampling(nss)
+					mem_inds['_counter_inds']=[]
+				calculate_inds, calc = make_calculator(ppc)
+				try:
+					cc = method(nss,depth)
+				except Exception as e:
+					print e
+					data[jj]=None
+					break
+				print 2*len(mem_inds['_counter_inds'])-1,depth,cc
+				data[jj].append((2*len(mem_inds['_counter_inds'])-1,depth,cc))
 	data = [d for d in data if d is not None]
 	output_file.write(json.dumps(data).replace("]","]\n"))
 	output_file.close()
