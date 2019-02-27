@@ -1,6 +1,6 @@
 import os
 
-prepends = ["stat","simple","burgess","castro","maleki"]
+prepends = ["stat","simple","burgess","castro","maleki","approshapley"]
 output_filename = "collated_output"
 
 for s in prepends:

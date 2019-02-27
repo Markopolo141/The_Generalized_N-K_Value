@@ -121,6 +121,29 @@ def reset_sampling(N):
 
 
 
+def approshapley(N,m):
+	mm = [0 for i in range(N)]
+	n = [0 for i in range(N)]
+	samples = 0
+	i=0
+	vector = list(range(N))
+	shuffle(vector)
+	v_zero = v([],N)
+	v_old = v_zero
+	while(samples<m):
+		v_new = v(vector[0:i+1],N)
+		mm[vector[i]] += v_new-v_old
+		v_old=v_new
+		n[vector[i]]+=1
+		i+=1
+		samples += 1
+		if (i>=N):
+			i=0
+			v_old=v_zero
+			vector = list(range(N))
+			shuffle(vector)
+	return [mm[i]*1.0/n[i] if n[i]>0 else 0 for i in range(N)]
+
 
 def simple(N,m):
 	mm = [[0 for i in range(N)] for ii in range(N)]
@@ -371,7 +394,7 @@ import click
 import json
 
 @click.command()
-@click.argument('method', type=click.Choice(['burgess', 'castro', 'maleki', 'simple']))
+@click.argument('method', type=click.Choice(['burgess', 'castro', 'maleki', 'simple', 'approshapley']))
 @click.argument('input_file', type=click.File('rb'))
 @click.argument('output_file', type=click.File('wb'))
 @click.argument('sample_start', type=click.INT)
