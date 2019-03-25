@@ -12,7 +12,7 @@ void printhead(double* head, int w) {
 	printf("%f]\n",head[w-1]);
 }
 
-#define double 1
+/*#define double 1
 
 class Mask {
 	public:
@@ -69,4 +69,4 @@ class Mask {
 	unsigned long B;
 	unsigned long C;
 };
-
+*/
