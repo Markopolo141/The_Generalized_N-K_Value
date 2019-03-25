@@ -52,7 +52,7 @@ void Table::print() {
 }
 
 void Table::print_pivot_info() {
-	printf("TABLE pivot info: table_pivot_column_number: %i\n\t",this->table_pivot_column_number);
+	printf("TABLE w=%i h=%i pivot info: table_pivot_column_number: %i\n\t",this->w,this->h,this->table_pivot_column_number);
 	printf("table_pivot_column_mask: ");
 	printbin(this->table_pivot_column_mask);
 	printf("\n\tpivot row columns: ");
@@ -62,7 +62,7 @@ void Table::print_pivot_info() {
 }
 
 void Table::print_pivotable_info() {
-	printf("TABLE pivotable info: pivotable_number: %i\n\t",this->pivotable_number);
+	printf("TABLE w=%i h=%i pivotable info: pivotable_number: %i\n\t",this->w,this->h,this->pivotable_number);
 	printf("table_pivotable_column_mask: ");
 	printbin(this->pivotable_columns_mask);
 	printf("\n\tpivots: ");
@@ -221,7 +221,7 @@ void Table::pivot(Table* t, int pivotable_index) {
 			double* scan_row = &(t->data)[j*this->w];
 			double scan_row_column = scan_row[column];
 			for (int i=0;i<this->w;i++)
-				this_scan_row[i] = scan_row[i] - scan_row_column*this_pivot_row[i];
+				this_scan_row[i] = SNAPTOZERO(scan_row[i] - scan_row_column*this_pivot_row[i]);
 		}
 	this->table_pivot_column_mask = t->table_pivot_column_mask ^ (((unsigned long)1)<<column);
 	int old_pivot_column = t->table_pivot_columns[row];
@@ -236,7 +236,7 @@ void Table::pivot(Table* t, int pivotable_index) {
 }
 
 
-// deletes row r, (not optimised function)
+// deletes row r, (not optimised function), need to recalculate pivotable info after
 void Table::delete_row(int r) {
 	if (this->table_pivot_columns[r] != -1) {
 		this->table_pivot_column_number -= 1;
@@ -251,7 +251,7 @@ void Table::delete_row(int r) {
 	this->h -= 1;
 }
 
-// deletes column c, (not optimised function), do not use on columns that are pivot columns, and recalculate pivotable information.
+// deletes column c, (not optimised function), do not use on columns that are pivot columns, and recalculate pivotable information after.
 void Table::delete_column(int c) {
 	for (int i=0; i<this->h; i++) {
 		if (this->table_pivot_columns[i]==c) {
@@ -274,10 +274,10 @@ bool Table::check_subset_improvable(unsigned long subset_mask, unsigned long not
 	unsigned long column_mask = subset_mask & this->pivotable_columns_mask;
 	for (int i=0;i<this->w-1;i++) {
 		if (maximising==true) {
-			if (head[i]>=0)
+			if (head[i]>=-3*TINY)
 				continue;
 		} else {
-			if (head[i]<=0)
+			if (head[i]<=3*TINY)
 				continue;
 		}
 		unsigned long imask = ((unsigned long)1)<<i;
@@ -286,7 +286,7 @@ bool Table::check_subset_improvable(unsigned long subset_mask, unsigned long not
 			bool viable = false;
 			for (j=0;j<this->h;j++) {
 				double v = get(i,j);
-				if (v>0) {
+				if (v>2*TINY) {
 					if ((((unsigned long)1)<<(this->table_pivot_columns[j])) & not_subset_mask) {
 						break;
 					}

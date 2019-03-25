@@ -105,6 +105,9 @@ Table* construct_table_from_analysis(
 	Table* t; // construct the table
 	t = (Table*)malloc(sizeof(Table));
 	t->initialise_and_wipe(w-1+artificial_variables+slackness_variables+excess_variables, h);
+	#if DEBUG==1
+		printf("Setting initial table data size to have width %i\n",w-2+artificial_variables+slackness_variables+excess_variables);
+	#endif
 
 	*slackness_columns = (int*)calloc(sizeof(int),h);  // construct holder for slackness columns
 	for (int i=0;i<h;i++) (*slackness_columns)[i]=-1;

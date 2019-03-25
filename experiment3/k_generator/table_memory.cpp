@@ -25,6 +25,7 @@ void Table_Memory::free_all() {
 		this->memory[l]->free_data();
 		free(this->memory[l]);
 	}
+	this->length = 0;
 }
 void Table_Memory::destroy() {
 	free(this->memory);

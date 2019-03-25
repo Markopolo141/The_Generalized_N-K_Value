@@ -24,6 +24,7 @@ void Reference_Memory::add(void* l) {
 void Reference_Memory::free_all() {
 	for (unsigned long l=0; l <this->length; l++)
 		free(this->memory[l]);
+	this->length = 0;
 }
 void Reference_Memory::destroy() {
 	free(this->memory);

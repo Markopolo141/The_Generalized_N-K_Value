@@ -1,11 +1,11 @@
 #include <Python.h>
 
-#define TINY 0.0000001
+#define TINY 0.000001
 #define MEMORY_INITIAL_SIZE 131072
+inline double SNAPTOZERO(double a) {return a < TINY ? (-a < TINY ? 0 : a) : a;}
 
 #define DEBUG 0
 #define PRUNING 1
-long enable_rs=0;
 
 #include <utils.cpp>
 #include <solver.cpp>
@@ -20,7 +20,7 @@ PyObject* python_error(const char *ss) {
 static PyObject* setup_solver(PyObject* self, PyObject* args) {
 	PyObject *input_array, *input_head;
 
-	if (!PyArg_ParseTuple(args, "OOi", &input_array, &input_head, &enable_rs)) {
+	if (!PyArg_ParseTuple(args, "OO", &input_array, &input_head)) {
 		return python_error("Argument must be a square python array, and a python array, and an integer 1 to enable ts else ts is disabled");
 	}
 
@@ -29,6 +29,7 @@ static PyObject* setup_solver(PyObject* self, PyObject* args) {
 		printf("FREEING ANY PREVIOUS MEMORY\n");
 	#endif
 	free_memory();
+	primary_setup_memory();
 	
 	int h = 0;
 	int w = 0;
@@ -69,7 +70,7 @@ static PyObject* setup_solver(PyObject* self, PyObject* args) {
 
 	// actually construct the table from the pyobject using analysed structure, additionally determine the slackness columns
 	int* slackness_columns;
-	Table* t = construct_table_from_analysis(
+	t = construct_table_from_analysis(
 		input_array,
 		w,
 		h,
@@ -119,7 +120,7 @@ static PyObject* setup_solver(PyObject* self, PyObject* args) {
 	#if DEBUG==1
 		printf("Loading Solver Working Memory\n");
 	#endif
-	setup_memory(t,w-2,enable_rs==1);
+	setup_memory(t,w-2);
 
 	#if DEBUG==1
 		printf("SETTING UP HEAD\n");
@@ -130,12 +131,6 @@ static PyObject* setup_solver(PyObject* self, PyObject* args) {
 		printf("Head set to:\n");
 		printhead(master_head,t->w);
 	#endif
-
-	#if DEBUG==1
-		printf("freeing initial table\n");
-	#endif
-	t->free_data();
-	free(t);
 
 	#if DEBUG==1
 		printf("Setup Solver routine complete\n\n");
@@ -170,40 +165,18 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printbin(coalition);
 		printf("\n");
 	#endif
-	int inverting;
-	if (analyse_coalition(&coalition,&anticoalition,&mask,&inverting)==-1)
+	if (analyse_coalition(&coalition,&anticoalition,&mask)==-1)
 		return python_error("coalition too big!");
 	#if DEBUG==1
 		printf("analysed anticoalition:\t");
 		printbin(anticoalition);
 		printf("\n");
 	#endif
-	
-	if (enable_rs==1) {
-		if (results[coalition] != DBL_MAX) {
-			#if DEBUG==1
-				printf("pos cache hit\n");
-				printf("finished %f\n",results[coalition]);
-			#endif
-			return PyFloat_FromDouble(results[coalition]);
-		}
-		if (results[anticoalition] != DBL_MAX) {
-			#if DEBUG==1
-				printf("neg cache hit\n");
-				printf("finished %f\n",-results[anticoalition]);
-			#endif
-			return PyFloat_FromDouble(-results[anticoalition]);
-		}
-	}
 
 	#if DEBUG==1
 		printf("applying coalition\n");
 	#endif
-	if (inverting==1) {
-		apply_coalition(coalition);
-	} else {
-		apply_coalition(anticoalition);
-	}
+	apply_coalition(coalition);
 
 	#if DEBUG==1
 		printf("new temporary_head: ");
@@ -213,7 +186,6 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printf("\n");
 	#endif
 	
-	//prev_max_table->calculate_pivots();
 	prev_max_table->apply_to_head(temporary_head,temporary_head);
 	#if DEBUG==1
 		printf("temporary_head manipulated: ");
@@ -229,14 +201,48 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		simplex(prev_max_table, temporary_head, true);
 	#endif
 	
+	#if DEBUG==1
+		printf("about to walkback on coalition\n");
+	#endif
 	double r;
-	if (inverting==1) {
-		r = walk_back(prev_max_table, coalition, ((((unsigned long)1)<<(prev_max_table->w-1))-1)&(~coalition), temporary_head);
-	} else {
-		r = inverting*walk_back(prev_max_table, anticoalition, ((((unsigned long)1)<<(prev_max_table->w-1))-1)&(~anticoalition), temporary_head);
-	}
-	if (enable_rs==1)
-		results[coalition] = r;
+	//r = temporary_head[prev_max_table->w-1];
+	r = walk_back(prev_max_table, coalition, ((((unsigned long)1)<<(prev_max_table->w-1))-1)&(~coalition), temporary_head);
+
+	#if DEBUG==1
+		printf("applying anticoalition\n");
+	#endif
+	apply_coalition(anticoalition);
+
+	#if DEBUG==1
+		printf("new temporary_head: ");
+		printhead(temporary_head, prev_min_table->w);
+		printf("about to simplex from mask: ");
+		printbin(prev_min_table->table_pivot_column_mask);
+		printf("\n");
+	#endif
+	
+	prev_min_table->apply_to_head(temporary_head,temporary_head);
+	#if DEBUG==1
+		printf("temporary_head manipulated: ");
+		printhead(temporary_head, prev_min_table->w);
+		simplex_max = simplex(prev_min_table, temporary_head, true);
+		printf("simplex maximum: %f\n", simplex_max);
+		printf("pivoted to mask: ");
+		printbin(prev_min_table->table_pivot_column_mask);
+		printf("\n");
+		prev_min_table->print();
+		printf("about to walk_back from simplex point\n");
+	#else
+		simplex(prev_min_table, temporary_head, true);
+	#endif
+	
+	#if DEBUG==1
+		printf("about to walkback on anticoalition\n");
+	#endif
+
+	//r += 0.5*r - 0.5*temporary_head[prev_max_table->w-1];
+	r = 0.5*r - 0.5*walk_back(prev_min_table, anticoalition, ((((unsigned long)1)<<(prev_min_table->w-1))-1)&(~anticoalition), temporary_head);
+	
 	#if DEBUG==1
 		printf("finished %f\n",r);
 	#endif
@@ -246,7 +252,12 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 
 
 
-
+static PyObject* spruik(PyObject* self, PyObject* args) {
+	prev_max_table->load(t);
+	prev_min_table->load(t);
+	
+	return PyFloat_FromDouble(1);
+}
 
 
 
@@ -255,12 +266,16 @@ static char setup_solver_docs[] =
 	"setup_solver(): does all the setup for the solver apparatus, conducting Phase I feasibility solving and initialising all memory.\n";
 static char solve_docs[] =
 	"solve(): for a coalition calculate the minimax value.\n";
+static char spruik_docs[] =
+	"asdfas.\n";
 
 static PyMethodDef bilevel_solver_funcs[] = {
 	{"setup_solver", (PyCFunction)setup_solver, 
 		METH_VARARGS, setup_solver_docs},
 	{"solve", (PyCFunction)solve, 
 		METH_VARARGS, solve_docs},
+	{"spruik", (PyCFunction)spruik, 
+		METH_NOARGS, spruik_docs},
 		{NULL}
 };
 

@@ -11,6 +11,7 @@ struct SortedList {
 	void* pop();
 	void destroy();
 	void print_all();
+	void setup();
 
 	SortedList();
 	~SortedList();
@@ -31,10 +32,14 @@ void SortedList::print_all() {
 }
 
 SortedList::SortedList() {
-	this->root = NULL;
+	this->setup();
 }
 SortedList::~SortedList() {
 	this->destroy();
+}
+
+void SortedList::setup() {
+	this->root = NULL;
 }
 
 void SortedList::destroy() {

@@ -9,69 +9,100 @@
 
 
 
+Table* t = NULL;
 Table* prev_max_table = NULL;
+Table* prev_min_table = NULL;
 
 double* master_head = NULL;
 double* temporary_head = NULL;
-double* results = NULL;
 int players;
+
+Memory* masks = NULL;
+Reference_Memory* refs = NULL;
+Table_Memory* table_refs = NULL;
+SortedList* pivot_list = NULL;
 
 
 void free_memory() {
-	if (results != NULL)
-		free(results);
 	if (prev_max_table != NULL) {
 		prev_max_table->free_data();
 		free(prev_max_table);
+		prev_max_table = NULL;
 	}
-	if (master_head != NULL)
+	if (prev_min_table != NULL) {
+		prev_min_table->free_data();
+		free(prev_min_table);
+		prev_min_table = NULL;
+	}
+	if (master_head != NULL) {
 		free(master_head);
-	if (temporary_head != NULL)
+		master_head = NULL;
+	}
+	if (temporary_head != NULL) {
 		free(temporary_head);
+		temporary_head = NULL;
+	}
+	
+	if (masks != NULL) {
+		masks->destroy();
+		free(masks);
+		masks = NULL;
+	}
+	if (refs != NULL) {
+		refs->destroy();
+		free(refs);
+		refs = NULL;
+	}
+	if (table_refs != NULL) {
+		table_refs->destroy();
+		free(table_refs);
+		table_refs = NULL;
+	}
+	if (pivot_list != NULL) {
+		free(pivot_list);
+		pivot_list = NULL;
+	}
+	if (t!=NULL) {
+		t->free_data();
+		free(t);
+		t = NULL;
+	}
 }
 
-void setup_memory(Table* t, int table_players, bool rs_enable) {
-	if (rs_enable==true) {
-		#if DEBUG==1
-			printf("ALLOCATING RESULTS SPACE size %i bytes\n",((unsigned long)1)<<(t->w));
-		#endif
-		results = (double*)calloc(sizeof(double),((unsigned long)1)<<(t->w));
-		for (unsigned long i=0; i<(((unsigned long)1)<<(t->w)); i++)
-			results[i] = DBL_MAX;
-	}
+void primary_setup_memory() {
+	masks = (Memory*)calloc(sizeof(Memory),1);
+	refs = (Reference_Memory*)calloc(sizeof(Reference_Memory),1);
+	table_refs = (Table_Memory*)calloc(sizeof(Table_Memory),1);
+	pivot_list = (SortedList*)calloc(sizeof(SortedList),1);
+	
+	masks->setup(MEMORY_INITIAL_SIZE);
+	refs->setup(MEMORY_INITIAL_SIZE);
+	table_refs->setup(MEMORY_INITIAL_SIZE);
+	pivot_list->setup();
+}
+
+void setup_memory(Table* t, int table_players) {
 	players = table_players;
 	prev_max_table = (Table*)malloc(sizeof(Table));
 	prev_max_table->initialise_and_load(t);
+	prev_min_table = (Table*)malloc(sizeof(Table));
+	prev_min_table->initialise_and_load(t);
 	master_head = (double*)calloc(sizeof(double),t->w);
 	temporary_head = (double*)calloc(sizeof(double),t->w);
 }
 
 
-int analyse_coalition(unsigned long *coalition, unsigned long *anticoalition, unsigned long *mask, int* inverting) {
+int analyse_coalition(unsigned long *coalition, unsigned long *anticoalition, unsigned long *mask) {
 	*mask = ((((unsigned long)1)<<players)-1);
 	if ((*coalition) - ((*mask)&(*coalition)) != 0)
 		return -1;
-	long coalition2 = *coalition;
-	int member_no = 0;
-	while (coalition2 > 0) {
-		member_no += coalition2&1;
-		coalition2 >>= 1;
-	}
 	*anticoalition = (*mask)^(*coalition);
-	#if DEBUG==1
-		printf("member number %i %i\n",member_no,players>>1);
-	#endif
-	if (member_no < (players>>1)) {
-		*inverting = -1;
-	} else {
-		*inverting = 1;
-	}
 	return 0;
 }
 
 
 void apply_coalition(unsigned long coalition) {
-	for (int i=0; i< prev_max_table->w; i++)
+	for (int i=0; i< prev_min_table->w; i++)
 		temporary_head[i] = 0;
 	for (int i=0; i< players; i++) {
 		if (coalition&1) {
@@ -84,11 +115,14 @@ void apply_coalition(unsigned long coalition) {
 }
 
 double simplex(Table* t, double* head, bool maximising) {
-	if (t->table_pivot_column_number != t->h)
-		printf("WARNING: simplex method on potentially badly formed table.\n");
+	if (t->table_pivot_column_number != t->h) {
+		printf("ERROR: simplex method on badly formed table.\n");
+		return -1;
+	}
 	//printf("SIMPLEX INITIALISE\n");
 	t->calculate_pivots();
 	t->apply_to_head(head,head);
+	masks->add(t->table_pivot_column_mask);
 	while (true) {
 		double best_improvement=0;
 		int best_improvement_index = -1;
@@ -97,12 +131,10 @@ double simplex(Table* t, double* head, bool maximising) {
 				double head_value = head[t->pivotable_columns[pivot_index]];
 				if (head_value < 0) {
 					double ratio = head_value*t->pivotable_ratios[pivot_index];
-					if (ratio<=best_improvement) {
-						//printf("nonbland ");
+					if (ratio<best_improvement) {
 						best_improvement = ratio;
 						best_improvement_index = pivot_index;
 					} else if ((ratio==0) && (best_improvement_index==-1)) { //bland's rule
-						//printf("bland \n");
 						best_improvement_index = pivot_index;
 					}
 				}
@@ -112,12 +144,10 @@ double simplex(Table* t, double* head, bool maximising) {
 				double head_value = head[t->pivotable_columns[pivot_index]];
 				if (head_value > 0) {
 					double ratio = head_value*t->pivotable_ratios[pivot_index];
-					if (ratio>=best_improvement) {
-						//printf("nonbland ");
+					if (ratio>best_improvement) {
 						best_improvement = ratio;
 						best_improvement_index = pivot_index;
 					} else if ((ratio==0) && (best_improvement_index==-1)) { //bland's rule
-						//printf("bland \n");
 						best_improvement_index = pivot_index;
 					}
 				}
@@ -126,12 +156,18 @@ double simplex(Table* t, double* head, bool maximising) {
 		if (best_improvement_index==-1) { // destinct optima attained
 			break;
 		}
+		//printf("best pivot index %i at %f improvement\n",best_improvement_index,best_improvement);
 		t->pivot(t, best_improvement_index);
 		t->apply_to_head(head,head);
-		//printf("pivoting\n");
+		if (best_improvement==0) {
+			if (masks->search(t->table_pivot_column_mask)==true) // if degenerate cycling is occuring in context of bland's rule
+				break;
+			masks->add(t->table_pivot_column_mask);
+		} else {
+			masks->clear();
+		}
 	}
-	prev_max_table = t;
-	//printf("SIMPLEX DONE\n");
+	masks->clear();
 	return head[t->w-1];
 }
 
@@ -158,10 +194,9 @@ unsigned long equation_pruning(Table* t, int* slackness_columns) {
 	int original_h = t->h;
 	int deletions = 0;
 	unsigned long deleted_columns=0;
-	int jj = 0;
+	int jj=0;
 	for (int j=0; j<original_h; j++) {
 		if (slackness_columns[j]!=-1) {
-			//printf("selecting slackness column %i\n",slackness_columns[j]);
 			for (int i=0;i<t->w;i++) {
 				if (i==slackness_columns[j]) {
 					head[i]=-1;
@@ -174,13 +209,14 @@ unsigned long equation_pruning(Table* t, int* slackness_columns) {
 				t->delete_column(slackness_columns[j]);
 				deleted_columns |= ((unsigned long)1)<<(slackness_columns[j]);
 				deletions++;
-				for (int jj=0;jj<original_h;jj++)
-					if (slackness_columns[jj]>slackness_columns[j])
-						slackness_columns[jj] -= 1;
-				//printf("DELETING\n");
+				for (int jjj=0;jjj<original_h;jjj++)
+					if (slackness_columns[jjj]>slackness_columns[j])
+						slackness_columns[jjj] -= 1;
 			} else {
 				jj++;
 			}
+		} else {
+			jj++;
 		}
 	}
 	free(head);
@@ -206,17 +242,9 @@ double walk_back(Table* t, unsigned long coalition, unsigned long anticoalition,
 	#endif
 	double* original_head = head;
 	int w = t->w;
-	
-	Memory* masks = (Memory*)calloc(sizeof(Memory),1);
-	Reference_Memory* refs = (Reference_Memory*)calloc(sizeof(Reference_Memory),1);
-	Table_Memory* table_refs = (Table_Memory*)calloc(sizeof(Table_Memory),1);
-	SortedList* pivot_list = (SortedList*)calloc(sizeof(SortedList),1);
-	
+	//printbin(t->table_pivot_column_mask);
+	//printf("\n");
 	WalkBackLinked* link;
-	
-	masks->setup(MEMORY_INITIAL_SIZE);
-	refs->setup(MEMORY_INITIAL_SIZE);
-	table_refs->setup(MEMORY_INITIAL_SIZE);
 	masks->add(t->table_pivot_column_mask);
 	
 	while (t->check_subset_improvable(anticoalition, coalition, head, false)) {
@@ -260,15 +288,8 @@ double walk_back(Table* t, unsigned long coalition, unsigned long anticoalition,
 	memcpy(original_head,head,sizeof(double)*w);
 	refs->free_all();
 	table_refs->free_all();
-	
-	table_refs->destroy();
-	refs->destroy();
-	masks->destroy();
 	pivot_list->destroy();
-	
-	free(refs);
-	free(masks);
-	free(pivot_list);
+	masks->clear();
 	return original_head[w-1];
 }
 
