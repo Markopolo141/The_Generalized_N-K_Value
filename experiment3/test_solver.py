@@ -21,6 +21,8 @@ def worker(number,data,ppc):
 	seed(32000)
 	m = 100
 	setup(ppc)
+	v([])
+	v([1,2,3,4])
 	'''listi = list(range(N))
 	shuffle(listi)
 	#spruik_solver()

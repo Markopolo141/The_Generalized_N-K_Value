@@ -204,10 +204,8 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printf("about to walkback on coalition\n");
 	#endif
 	double r;
-	r = temporary_head[prev_max_table->w-1];
-	printbin(prev_max_table->table_pivot_column_mask);
-	printf("\n");
-	/*r = walk_back(prev_max_table, coalition, ((((unsigned long)1)<<(prev_max_table->w-1))-1)&(~coalition), temporary_head);
+	//r = temporary_head[prev_max_table->w-1];
+	r = walk_back(prev_max_table, coalition, ((((unsigned long)1)<<(prev_max_table->w-1))-1)&(~coalition), temporary_head);
 
 	#if DEBUG==1
 		printf("applying anticoalition\n");
@@ -242,7 +240,7 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	#endif
 
 	//r += 0.5*r - 0.5*temporary_head[prev_max_table->w-1];
-	r = 0.5*r - 0.5*walk_back(prev_min_table, anticoalition, ((((unsigned long)1)<<(prev_min_table->w-1))-1)&(~anticoalition), temporary_head);*/
+	r = 0.5*r - 0.5*walk_back(prev_min_table, anticoalition, ((((unsigned long)1)<<(prev_min_table->w-1))-1)&(~anticoalition), temporary_head);
 	
 	#if DEBUG==1
 		printf("finished %f\n",r);

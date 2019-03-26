@@ -211,9 +211,8 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printf("about to walkback on coalition\n");
 	#endif
 	double r;
-	r = temporary_head[prev_max_table->w-1];
-	prev_max_table->table_pivot_column_mask->print();
-	/*r = walk_back(prev_max_table, &coalition_mask, &anticoalition_player_mask, temporary_head);
+	//r = temporary_head[prev_max_table->w-1];
+	r = walk_back(prev_max_table, &coalition_mask, &anticoalition_player_mask, temporary_head);
 
 	#if DEBUG==1
 		printf("applying anticoalition\n");
@@ -246,7 +245,7 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	#endif
 
 	//r += 0.5*r - 0.5*temporary_head[prev_max_table->w-1];
-	r = 0.5*r - 0.5*walk_back(prev_min_table, &anticoalition_mask, &coalition_player_mask, temporary_head);*/
+	r = 0.5*r - 0.5*walk_back(prev_min_table, &anticoalition_mask, &coalition_player_mask, temporary_head);
 	
 	#if DEBUG==1
 		printf("finished %f\n",r);
