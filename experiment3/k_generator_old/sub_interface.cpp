@@ -17,20 +17,20 @@ int analyse_pyobject_table(
 		PyObject *input_array,
 		int* w,
 		int* h,
-		Mask* invert_mask,
-		Mask* slackness_mask,
-		Mask* excess_mask,
-		Mask* artificial_mask,
+		unsigned long* invert_mask,
+		unsigned long* slackness_mask,
+		unsigned long* excess_mask,
+		unsigned long* artificial_mask,
 		int* artificial_variables,
 		int* slackness_variables,
 		int* excess_variables) {
 
 	*w = -1;
 	*h = (int)PyList_Size(input_array);
-	invert_mask->set_zero();
-	slackness_mask->set_zero();
-	excess_mask->set_zero();
-	artificial_mask->set_zero();
+	*invert_mask = 0;
+	*slackness_mask = 0;
+	*excess_mask = 0;
+	*artificial_mask = 0;
 	*artificial_variables = 0;
 	*slackness_variables = 0;
 	*excess_variables = 0;
@@ -52,32 +52,32 @@ int analyse_pyobject_table(
 		if (PyFloat_AsDouble(PyList_GetItem(row, *w-2))>=0) {
 			if (comparrison == 0) { // an equality constraint
 				*artificial_variables += 1;
-				artificial_mask->set_bit(i,1);
+				*artificial_mask |= ((unsigned long)1)<<i;
 			} else if (comparrison == 1) { // a greater-than constraint
 				*artificial_variables += 1;
-				artificial_mask->set_bit(i,1);
+				*artificial_mask |= ((unsigned long)1)<<i;
 				*excess_variables += 1;
-				excess_mask->set_bit(i,1);
+				*excess_mask |= ((unsigned long)1)<<i;
 			} else if (comparrison == -1) { // a less-than constraint
 				*slackness_variables += 1;
-				slackness_mask->set_bit(i,1);
+				*slackness_mask |= ((unsigned long)1)<<i;
 			} else {
 				PyErr_Format(PyExc_TypeError, "Argument to %s must be a square array with right-side values of 0 or 1 or -1", __FUNCTION__);
 				return -1;
 			}
 		} else {
-			invert_mask->set_bit(i,1);
+			*invert_mask |= ((unsigned long)1)<<i;
 			if (comparrison == 0) { // an equality constraint
 				*artificial_variables += 1;
-				artificial_mask->set_bit(i,1);
+				*artificial_mask |= ((unsigned long)1)<<i;
 			} else if (comparrison == 1) { // effectively a less-than constraint
 				*slackness_variables += 1;
-				slackness_mask->set_bit(i,1);
+				*slackness_mask |= ((unsigned long)1)<<i;
 			} else if (comparrison == -1) {  // effectively a greater-than constraint
 				*artificial_variables += 1;
-				artificial_mask->set_bit(i,1);
+				*artificial_mask |= ((unsigned long)1)<<i;
 				*excess_variables += 1;
-				excess_mask->set_bit(i,1);
+				*excess_mask |= ((unsigned long)1)<<i;
 			} else {
 				PyErr_Format(PyExc_TypeError, "Argument to %s must be a square array with right-side values of 0 or 1 or -1", __FUNCTION__);
 				return -1;
@@ -93,10 +93,10 @@ Table* construct_table_from_analysis(
 		PyObject *input_array,
 		int w,
 		int h,
-		Mask invert_mask,
-		Mask slackness_mask,
-		Mask excess_mask,
-		Mask artificial_mask,
+		unsigned long invert_mask,
+		unsigned long slackness_mask,
+		unsigned long excess_mask,
+		unsigned long artificial_mask,
 		int artificial_variables,
 		int slackness_variables,
 		int excess_variables,
@@ -121,35 +121,35 @@ Table* construct_table_from_analysis(
 		double v;
 		for (int i=0; i<w-2; i++) {  // load in all the numeric entities
 			v = PyFloat_AsDouble(PyList_GetItem(PyList_GetItem(input_array,j),i));
-			if (invert_mask.get_bit(j)==1) {
+			if (invert_mask&(((unsigned long)1)<<j)) {
 				t->set(i, j, -v);
 			} else {
 				t->set(i, j, v);
 			}
 		}
 		v = PyFloat_AsDouble(PyList_GetItem(PyList_GetItem(input_array,j),w-2));
-		if (invert_mask.get_bit(j)==1) { // rightmost column
+		if (invert_mask&(((unsigned long)1)<<j)) { // rightmost column
 			t->set(w-2+artificial_variables+slackness_variables+excess_variables, j, -v);
 		} else {
 			t->set(w-2+artificial_variables+slackness_variables+excess_variables, j, v);
 		}
-		if (slackness_mask.get_bit(j)==1) { // slackness variables
+		if (slackness_mask&(((unsigned long)1)<<j)) { // slackness variables
 			t->set(s,j,1);
 			t->table_pivot_columns[j] = s;
-			t->table_pivot_column_mask->set_bit(s,1);
+			t->table_pivot_column_mask |= ((unsigned long)1)<<s;
 			t->table_pivot_column_number += 1;
 			(*slackness_columns)[j]=s;
 			s++;
 		}
-		if (excess_mask.get_bit(j)==1) { // excess variables
+		if (excess_mask&(((unsigned long)1)<<j)) { // excess variables
 			t->set(e,j,-1);
 			(*slackness_columns)[j]=e;
 			e++;
 		}
-		if (artificial_mask.get_bit(j)==1) { // artificial varibles for phase I
+		if (artificial_mask&(((unsigned long)1)<<j)) { // artificial varibles for phase I
 			t->set(a,j,1);
 			t->table_pivot_columns[j] = a;
-			t->table_pivot_column_mask->set_bit(a,1);
+			t->table_pivot_column_mask |= ((unsigned long)1)<<a;
 			t->table_pivot_column_number += 1;
 			a++;
 		}

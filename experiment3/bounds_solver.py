@@ -28,7 +28,7 @@ def worker(number,data,ppc):
 	temp_data = [[0 for i in range(N)] for i in range(N)]
 	mm = [[0.0 for i in range(N)] for ii in range(N)]
 	ss = [[0.0 for i in range(N)] for ii in range(N)]
-	v0 = v([])
+	v0 = 0.0#v([])
 	while (True):
 		for i in range(0,m,N):
 			vector = list(range(N))

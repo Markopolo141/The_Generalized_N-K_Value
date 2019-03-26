@@ -224,17 +224,17 @@ struct WalkBackLinked : ValueLinked {
 	double* head;
 };
 
-double walk_back(Table* t, Mask* coalition, Mask* anticoalition, double* head) {
+double walk_back(Table* t, unsigned long coalition, unsigned long anticoalition, double* head) {
 	#if DEBUG==1
 		printf("WALKBACK: coalition: ");
-		coalition->print();
+		printbin(coalition);
 		printf("   anticoalition: ");
-		anticoalition->print();
+		printbin(anticoalition);
+		printf("\n");
 		printhead(head, t->w);
 		t->print();
 		int walkbacks = 0;
 	#endif
-	//int walkbacks = 0;
 	double* original_head = head;
 	int w = t->w;
 	//printbin(t->table_pivot_column_mask);
@@ -242,17 +242,13 @@ double walk_back(Table* t, Mask* coalition, Mask* anticoalition, double* head) {
 	WalkBackLinked* link;
 	masks->add(t->table_pivot_column_mask);
 	
-	Mask* new_mask = (Mask*)malloc(sizeof(Mask));
 	while (t->check_subset_improvable(anticoalition, coalition, head, false)) {
 		#if DEBUG==1
 			printf("ITERATING %i\n",walkbacks);
 			walkbacks++;
 		#endif
-		//walkbacks++;
 		for (int i=0; i < t->pivotable_number; i++) {
-			new_mask->set(t->table_pivot_column_mask);
-			new_mask->flip_bit(t->pivotable_columns[i]);
-			new_mask->flip_bit(t->table_pivot_columns[t->pivotable_rows[i]]);
+			unsigned long new_mask = t->table_pivot_column_mask ^ ((((unsigned long)1)<<(t->pivotable_columns[i]))|(((unsigned long)1)<<(t->table_pivot_columns[t->pivotable_rows[i]])));
 			if (masks->search(new_mask)==false) {
 				link = (WalkBackLinked*)malloc(sizeof(WalkBackLinked));
 				link->t = t;
@@ -289,7 +285,6 @@ double walk_back(Table* t, Mask* coalition, Mask* anticoalition, double* head) {
 	table_refs->free_all();
 	pivot_list->destroy();
 	masks->clear();
-	free(new_mask);
 	return original_head[w-1];
 }
 

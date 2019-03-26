@@ -1,4 +1,4 @@
-from random import shuffle,random
+from random import shuffle,random,seed
 import click
 import json
 import time
@@ -18,14 +18,15 @@ def v(s):
 
 
 def worker(number,data,ppc):
+	seed(32000)
 	m = 100
 	setup(ppc)
-	listi = list(range(N))
+	'''listi = list(range(N))
 	shuffle(listi)
-	spruik_solver()
-	for ii in range(450):
-		output = []
-		for i in range(N+1):
+	#spruik_solver()
+	for ii in range(1):
+		output = [0.0]
+		for i in range(1,N+1):
 			#if (int(random()*4)==0):
 			#	spruik_solver()
 			vv = listi[0:i]
@@ -34,7 +35,7 @@ def worker(number,data,ppc):
 			#print "{}\t".format(v(vv)),
 			output.append(int(v(vv)))
 		print output
-		#print ""
+		#print ""'''
 
 
 
