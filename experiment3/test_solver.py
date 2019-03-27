@@ -11,7 +11,8 @@ def v(s):
 	ii = 0
 	for ss in s:
 		ii |= 1<<ss;
-	return 0.5*calc_maxmin_minmax(ii)
+	#return 0.5*calc_maxmin_minmax(ii)
+	return calc_maxmin_minmax(ii)
 
 #def v(s):
 #	return sqrt(sum(s))
@@ -21,14 +22,13 @@ def worker(number,data,ppc):
 	seed(32000)
 	m = 100
 	setup(ppc)
-	v([])
-	v([1,2,3,4])
-	'''listi = list(range(N))
+	listi = list(range(N))
 	shuffle(listi)
 	#spruik_solver()
-	for ii in range(1):
+	for ii in range(3):
+		#print "hello"
 		output = [0.0]
-		for i in range(1,N+1):
+		for i in range(1,N):#N+1):
 			#if (int(random()*4)==0):
 			#	spruik_solver()
 			vv = listi[0:i]
@@ -37,7 +37,7 @@ def worker(number,data,ppc):
 			#print "{}\t".format(v(vv)),
 			output.append(int(v(vv)))
 		print output
-		#print ""'''
+		#print ""
 
 
 

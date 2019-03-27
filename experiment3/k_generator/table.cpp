@@ -189,12 +189,13 @@ void Table::calculate_pivots() {
 		for (int j=0;j<h;j++) {
 			double v = this->get(i,j);
 			if (v>0) {
-				double ratio = (this->get(wminusone,j))/v;
+				double right_value = this->get(wminusone,j);
+				double ratio = right_value/v;
 				if (ratio<best_ratio) {
 					best_ratio = ratio;
 					best_mask->set_zero();
 					best_mask->set_bit(j,1);
-				} else if (ratio==best_ratio) {
+				} else if (ratio==best_ratio) {	//TODO: make fuzzy....
 					best_mask->set_bit(j,1);
 				}
 			}

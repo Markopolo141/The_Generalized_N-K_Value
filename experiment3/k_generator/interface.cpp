@@ -4,7 +4,7 @@
 #define MEMORY_INITIAL_SIZE 131072
 inline double SNAPTOZERO(double a) {return a < TINY ? (-a < TINY ? 0 : a) : a;}
 
-#define DEBUG 1
+#define DEBUG 0
 #define PRUNING 1
 
 #include <utils.cpp>
@@ -212,7 +212,10 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	#endif
 	double r;
 	//r = temporary_head[prev_max_table->w-1];
-	r = walk_back(prev_max_table, &coalition_mask, &anticoalition_player_mask, temporary_head);
+	//printhead(temporary_head,prev_max_table->w);
+	//prev_max_table->table_pivot_column_mask->print();
+	//prev_max_table->print();
+	//r = walk_back(prev_max_table, &coalition_mask, &anticoalition_player_mask, temporary_head);
 
 	#if DEBUG==1
 		printf("applying anticoalition\n");
@@ -245,7 +248,8 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	#endif
 
 	//r += 0.5*r - 0.5*temporary_head[prev_max_table->w-1];
-	r = 0.5*r - 0.5*walk_back(prev_min_table, &anticoalition_mask, &coalition_player_mask, temporary_head);
+	//r = 0.5*r - 0.5*walk_back(prev_min_table, &anticoalition_mask, &coalition_player_mask, temporary_head);
+	r = walk_back(prev_min_table, &anticoalition_mask, &coalition_player_mask, temporary_head);
 	
 	#if DEBUG==1
 		printf("finished %f\n",r);

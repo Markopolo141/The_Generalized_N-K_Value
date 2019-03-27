@@ -254,7 +254,7 @@ double walk_back(Table* t, unsigned long coalition, unsigned long anticoalition,
 				link->t = t;
 				link->head = head;
 				link->pivot_index = i;
-				link->v = -(head[w-1] - t->pivotable_ratios[i]*head[t->pivotable_columns[i]]);
+				link->v = (head[w-1] - t->pivotable_ratios[i]*head[t->pivotable_columns[i]]);
 				pivot_list->add(link);
 				masks->add(new_mask);
 			}

@@ -224,7 +224,11 @@ struct WalkBackLinked : ValueLinked {
 	double* head;
 };
 
+int zzz = 0;
+
 double walk_back(Table* t, Mask* coalition, Mask* anticoalition, double* head) {
+	if ((zzz==11)||(zzz==21))
+		printf("X\n");
 	#if DEBUG==1
 		printf("WALKBACK: coalition: ");
 		coalition->print();
@@ -234,6 +238,17 @@ double walk_back(Table* t, Mask* coalition, Mask* anticoalition, double* head) {
 		t->print();
 		int walkbacks = 0;
 	#endif
+	
+	if ((zzz==11)||(zzz==21)) {
+		coalition->print();
+		anticoalition->print();
+		
+		printf("TABLE:\n");
+		printhead(head,t->w);
+		t->table_pivot_column_mask->print();
+		t->print();
+	}
+	
 	//int walkbacks = 0;
 	double* original_head = head;
 	int w = t->w;
@@ -258,7 +273,7 @@ double walk_back(Table* t, Mask* coalition, Mask* anticoalition, double* head) {
 				link->t = t;
 				link->head = head;
 				link->pivot_index = i;
-				link->v = -(head[w-1] - t->pivotable_ratios[i]*head[t->pivotable_columns[i]]);
+				link->v = (head[w-1] - t->pivotable_ratios[i]*head[t->pivotable_columns[i]]);
 				pivot_list->add(link);
 				masks->add(new_mask);
 			}
@@ -267,6 +282,17 @@ double walk_back(Table* t, Mask* coalition, Mask* anticoalition, double* head) {
 			masks->print_all();
 			pivot_list->print_all();
 		#endif
+		if ((zzz==11)||(zzz==21)) {
+			WalkBackLinked *ww;
+			ww = (WalkBackLinked*)pivot_list->root;
+			printf("SORTEDLIST contents:\n");
+			if (ww!=NULL)
+				while (ww!= NULL) {
+					printf("\t%f\t%i,%i\t%li\n",ww->v,ww->t->pivotable_rows[ww->pivot_index],ww->t->pivotable_columns[ww->pivot_index],((long)(ww->t)));
+					ww = (WalkBackLinked*)(ww->next);
+				}
+			masks->print_all();
+		}
 		
 		link = (WalkBackLinked*)(pivot_list->pop());
 		head = (double*)malloc(sizeof(double)*(w));
@@ -277,6 +303,13 @@ double walk_back(Table* t, Mask* coalition, Mask* anticoalition, double* head) {
 		t->pivot(link->t,link->pivot_index);
 		t->apply_to_head(link->head,head);
 		free(link);
+		
+		if ((zzz==11)||(zzz==21)) {
+			printf("TABLE:\n");
+			printhead(head,t->w);
+			t->table_pivot_column_mask->print();
+			t->print();
+		}
 	}
 	#if DEBUG==1
 		printf("finished walkback: %i walkbacks\n",walkbacks);
@@ -290,6 +323,10 @@ double walk_back(Table* t, Mask* coalition, Mask* anticoalition, double* head) {
 	pivot_list->destroy();
 	masks->clear();
 	free(new_mask);
+	
+	if ((zzz==11)||(zzz==21))
+		printf("RETURNING: %f\n", original_head[w-1]);
+	zzz++;
 	return original_head[w-1];
 }
 
