@@ -63,7 +63,7 @@ void SortedList::add(ValueLinked *l) {
 		return;
 	}
 	double v = l->v;
-	if (current->v < v) {
+	if (current->v <= v) {
 		this->root = l;
 		l->next = current;
 		return;
@@ -71,7 +71,7 @@ void SortedList::add(ValueLinked *l) {
 	previous = current;
 	current = current->next;
 	while (current!=NULL) {
-		if (current->v < v) {
+		if (current->v <= v) {
 			previous->next = l;
 			l->next = current;
 			return;

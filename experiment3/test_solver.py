@@ -22,13 +22,14 @@ def worker(number,data,ppc):
 	seed(32000)
 	m = 100
 	setup(ppc)
+	#v([0,1,2,3,4])
 	listi = list(range(N))
 	shuffle(listi)
 	#spruik_solver()
-	for ii in range(3):
+	for ii in range(1):
 		#print "hello"
 		output = [0.0]
-		for i in range(1,N):#N+1):
+		for i in range(1,N+1):#N+1):
 			#if (int(random()*4)==0):
 			#	spruik_solver()
 			vv = listi[0:i]

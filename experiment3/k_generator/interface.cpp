@@ -170,11 +170,6 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printbin(anticoalition);
 		printf("\n");
 	#endif
-
-	#if DEBUG==1
-		printf("applying coalition\n");
-	#endif
-	apply_coalition(coalition);
 	Mask player_mask, anticoalition_player_mask, coalition_player_mask, coalition_mask, anticoalition_mask;
 	player_mask.set_ones(prev_max_table->w-1);
 	anticoalition_player_mask = player_mask;
@@ -185,6 +180,11 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	anticoalition_mask.A = anticoalition;
 	coalition_mask.set_zero();
 	coalition_mask.A = coalition;
+
+	#if DEBUG==1
+		printf("applying coalition\n");
+	#endif
+	apply_coalition(coalition);
 
 	#if DEBUG==1
 		printf("new temporary_head: ");
@@ -212,9 +212,6 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	#endif
 	double r;
 	//r = temporary_head[prev_max_table->w-1];
-	//printhead(temporary_head,prev_max_table->w);
-	//prev_max_table->table_pivot_column_mask->print();
-	//prev_max_table->print();
 	//r = walk_back(prev_max_table, &coalition_mask, &anticoalition_player_mask, temporary_head);
 
 	#if DEBUG==1
@@ -233,8 +230,8 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	#if DEBUG==1
 		printf("temporary_head manipulated: ");
 		printhead(temporary_head, prev_min_table->w);
-		simplex_max = simplex(prev_min_table, temporary_head, true);
-		printf("simplex maximum: %f\n", simplex_max);
+		simplex_min = simplex(prev_min_table, temporary_head, true);
+		printf("simplex maximum: %f\n", simplex_min);
 		printf("pivoted to mask: ");
 		prev_min_table->table_pivot_column_mask.print();
 		prev_min_table->print();
@@ -250,6 +247,7 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	//r += 0.5*r - 0.5*temporary_head[prev_max_table->w-1];
 	//r = 0.5*r - 0.5*walk_back(prev_min_table, &anticoalition_mask, &coalition_player_mask, temporary_head);
 	r = walk_back(prev_min_table, &anticoalition_mask, &coalition_player_mask, temporary_head);
+	//r = walk_forward(prev_min_table, &anticoalition_mask, &coalition_player_mask, temporary_head);
 	
 	#if DEBUG==1
 		printf("finished %f\n",r);

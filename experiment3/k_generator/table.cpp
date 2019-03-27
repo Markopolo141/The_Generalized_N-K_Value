@@ -180,30 +180,26 @@ void Table::calculate_pivots() {
 	int h = this->h;
 	this->pivotable_columns_mask->set_zero();
 	this->pivotable_number = 0;
-	Mask* best_mask = (Mask*)malloc(sizeof(Mask));
 	for (unsigned char i=0;i<wminusone;i++) { // for each column
 		if (this->table_pivot_column_mask->get_bit(i)==1) // scip if it is already table pivot column
 			continue;
-		best_mask->set_zero();
+		row_memory->clear();
 		double best_ratio = DBL_MAX; // find if the column can be pivoted and detect the pivot row/s for the column
 		for (int j=0;j<h;j++) {
 			double v = this->get(i,j);
 			if (v>0) {
 				double right_value = this->get(wminusone,j);
+				row_memory->add(v,right_value,j);
 				double ratio = right_value/v;
-				if (ratio<best_ratio) {
+				if (ratio<best_ratio)
 					best_ratio = ratio;
-					best_mask->set_zero();
-					best_mask->set_bit(j,1);
-				} else if (ratio==best_ratio) {	//TODO: make fuzzy....
-					best_mask->set_bit(j,1);
-				}
 			}
 		}
-		for (unsigned char z=0; z<best_mask->length; z++) {// if there is a best row add the info to the datastructure
-			if (best_mask->get_bit(z)==1) {
+		for (unsigned char z=0; z<row_memory->length; z++) {// if there is a best row add the info to the datastructure
+			Row_iter* r = &(row_memory->memory[z]);
+			if ((r->right) - best_ratio*(r->val) < TINY) {
 				this->pivotable_columns[this->pivotable_number] = i;
-				this->pivotable_rows[this->pivotable_number] = z;
+				this->pivotable_rows[this->pivotable_number] = r->index;
 				this->pivotable_ratios[this->pivotable_number]=best_ratio;
 				this->pivotable_columns_mask->set_bit(i,1);
 				this->pivotable_number += 1;
@@ -216,20 +212,40 @@ void Table::calculate_pivots() {
 void Table::pivot(Table* t, int pivotable_index) {
 	int row = t->pivotable_rows[pivotable_index];
 	int column = t->pivotable_columns[pivotable_index];
-	double* this_pivot_row = &(this->data)[row*this->w];
 	double* pivot_row = &(t->data)[row*this->w];
 	double center = pivot_row[column];
-	for (int i=0;i<this->w;i++)
-		this_pivot_row[i] = pivot_row[i] / center;
-	for (int j=0;j<this->h;j++)
-		if (j!=row) {
-			double* this_scan_row = &(this->data)[j*this->w];
-			double* scan_row = &(t->data)[j*this->w];
-			double scan_row_column = scan_row[column];
-			for (int i=0;i<this->w;i++)
-				this_scan_row[i] = SNAPTOZERO(scan_row[i] - scan_row_column*this_pivot_row[i]);
-		}
-	this->table_pivot_column_mask->set(t->table_pivot_column_mask);
+	if (t==this) {
+		for (int i=0;i<this->w;i++)
+			pivot_row[i] /= center;
+		for (int j=0;j<this->h;j++)
+			if (j!=row) {
+				double* scan_row = &(t->data)[j*this->w];
+				double scan_row_column = scan_row[column];
+				if (scan_row_column!=0)
+					for (int i=0;i<this->w;i++)
+						scan_row[i] = SNAPTOZERO(scan_row[i] - scan_row_column*pivot_row[i]);
+			}
+
+	} else {
+		double* this_pivot_row = &(this->data)[row*this->w];
+		for (int i=0;i<this->w;i++)
+			this_pivot_row[i] = pivot_row[i] / center;
+		for (int j=0;j<this->h;j++)
+			if (j!=row) {
+				double* this_scan_row = &(this->data)[j*this->w];
+				double* scan_row = &(t->data)[j*this->w];
+				double scan_row_column = scan_row[column];
+				if (scan_row_column!=0) {
+					for (int i=0;i<this->w;i++)
+						this_scan_row[i] = SNAPTOZERO(scan_row[i] - scan_row_column*this_pivot_row[i]);
+				} else {
+					for (int i=0;i<this->w;i++)
+						this_scan_row[i] = scan_row[i];
+				}
+			}
+		this->table_pivot_column_mask->set(t->table_pivot_column_mask);
+		this->table_pivot_column_number = t->table_pivot_column_number;
+	}
 	this->table_pivot_column_mask->flip_bit(column);
 	int old_pivot_column = t->table_pivot_columns[row];
 	if (old_pivot_column != -1) {
@@ -237,9 +253,9 @@ void Table::pivot(Table* t, int pivotable_index) {
 	} else {
 		this->table_pivot_column_number = t->table_pivot_column_number + 1;
 	}
-	memcpy ( this->table_pivot_columns, t->table_pivot_columns, sizeof(int)*(this->h) );
+	if (t!=this)
+		memcpy ( this->table_pivot_columns, t->table_pivot_columns, sizeof(int)*(this->h) );
 	this->table_pivot_columns[row] = column;
-	this->calculate_pivots();
 }
 
 
