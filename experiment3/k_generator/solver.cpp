@@ -4,8 +4,10 @@
 #include "row_memory.cpp"
 Row_Memory* row_memory = NULL;
 
-#include "table.cpp"
 #include "mask_memory.cpp"
+Mask_Memory* masks = NULL;
+
+#include "table.cpp"
 #include "reference_memory.cpp"
 #include "table_memory.cpp"
 #include "sorted_list.cpp"
@@ -21,7 +23,6 @@ double* master_head = NULL;
 double* temporary_head = NULL;
 int players;
 
-Mask_Memory* masks = NULL;
 Reference_Memory* refs = NULL;
 Table_Memory* table_refs = NULL;
 SortedList* pivot_list = NULL;
@@ -133,63 +134,7 @@ void apply_coalition(unsigned long coalition) {
 	}
 }
 
-double simplex(Table* t, double* head, bool maximising) {
-	if (t->table_pivot_column_number != t->h) {
-		printf("ERROR: simplex method on badly formed table.\n");
-		return -1;
-	}
-	//printf("SIMPLEX INITIALISE\n");
-	t->calculate_pivots();
-	t->apply_to_head(head,head);
-	masks->add(t->table_pivot_column_mask);
-	while (true) {
-		double best_improvement=0;
-		int best_improvement_index = -1;
-		if (maximising==true) {
-			for (int pivot_index=0; pivot_index < t->pivotable_number; pivot_index++) {
-				double head_value = head[t->pivotable_columns[pivot_index]];
-				if (head_value < 0) {
-					double ratio = head_value*t->pivotable_ratios[pivot_index];
-					if (ratio<best_improvement) {
-						best_improvement = ratio;
-						best_improvement_index = pivot_index;
-					} else if ((ratio==0) && (best_improvement_index==-1)) { //bland's rule
-						best_improvement_index = pivot_index;
-					}
-				}
-			}
-		} else {
-			for (int pivot_index=0; pivot_index < t->pivotable_number; pivot_index++) {
-				double head_value = head[t->pivotable_columns[pivot_index]];
-				if (head_value > 0) {
-					double ratio = head_value*t->pivotable_ratios[pivot_index];
-					if (ratio>best_improvement) {
-						best_improvement = ratio;
-						best_improvement_index = pivot_index;
-					} else if ((ratio==0) && (best_improvement_index==-1)) { //bland's rule
-						best_improvement_index = pivot_index;
-					}
-				}
-			}
-		}
-		if (best_improvement_index==-1) { // destinct optima attained
-			break;
-		}
-		//printf("best pivot index %i at %f improvement\n",best_improvement_index,best_improvement);
-		t->pivot(t, best_improvement_index);
-		t->calculate_pivots();
-		t->apply_to_head(head,head);
-		if (best_improvement==0) {
-			if (masks->search(t->table_pivot_column_mask)==true) // if degenerate cycling is occuring in context of bland's rule
-				break;
-			masks->add(t->table_pivot_column_mask);
-		} else {
-			masks->clear();
-		}
-	}
-	masks->clear();
-	return head[t->w-1];
-}
+
 
 
 
@@ -197,7 +142,7 @@ bool artificial_variables_simplex(Table* t, int artificial_variables) {
 	double* head = (double*)calloc(sizeof(double),t->w);
 	for (int i=t->w-1-artificial_variables; i<t->w-1; i++)
 		head[i] = -1.0;
-	if (simplex(t,head,false)>TINY) {
+	if (t->simplex(head,false)>TINY) {
 		printf("ERROR: INFEASIBIILTY\n");
 		return false;
 	}
@@ -222,7 +167,7 @@ void equation_pruning(Table* t, int* slackness_columns) {
 					head[i]=0;
 				}
 			}
-			if (simplex(t,head,false)>TINY) {
+			if (t->simplex(head,false)>TINY) {
 				t->delete_row(jj);
 				t->delete_column(slackness_columns[j]);
 				for (int jjj=0;jjj<original_h;jjj++)
@@ -245,12 +190,10 @@ struct WalkBackLinked : ValueLinked {
 };
 
 
-double walk_back(Table* t, Mask* coalition, Mask* anticoalition, double* head) {
+double walk_back(Table* t, Mask* coalition, double* head) {
 	#if DEBUG==1
 		printf("WALKBACK: coalition: ");
 		coalition->print();
-		printf("   anticoalition: ");
-		anticoalition->print();
 		printhead(head, t->w);
 		t->table_pivot_column_mask->print();
 		t->print();
@@ -266,7 +209,7 @@ double walk_back(Table* t, Mask* coalition, Mask* anticoalition, double* head) {
 	masks->add(t->table_pivot_column_mask);
 	
 	Mask* new_mask = (Mask*)malloc(sizeof(Mask));
-	while (t->check_subset_improvable(anticoalition, coalition, head, false)) {
+	while (t->check_subset_improvable(coalition, head, false)) {
 		#if DEBUG==1
 			printf("ITERATING %i\n",walkbacks);
 			walkbacks++;
@@ -437,7 +380,7 @@ double walk_back(Table* t, Mask* coalition, Mask* anticoalition, double* head) {
 //	double* head;
 //};
 
-double walk_forward(Table* t, Mask* coalition, Mask* anticoalition, double* head) {
+double walk_forward(Table* t, Mask* coalition, double* head) {
 	#if DEBUG==1
 		printf("WALKFORWARD: coalition: ");
 		coalition->print();
@@ -448,7 +391,7 @@ double walk_forward(Table* t, Mask* coalition, Mask* anticoalition, double* head
 		t->print();
 		int walkbacks = 0;
 	#endif
-	if (t->check_subset_improvable(anticoalition, coalition, head, true)) {
+	if (t->check_subset_improvable(coalition, head, true)) {
 		printf("ERROR: simplex_while_unimprovable given bad table\n");
 		return -1;
 	}
@@ -489,9 +432,9 @@ double walk_forward(Table* t, Mask* coalition, Mask* anticoalition, double* head
 			if (masks->search(new_mask)==false) {
 				masks->add(new_mask);
 				new_table->pivot(t,i);
-				new_table->calculate_pivots();
 				new_table->apply_to_head(head,new_head);
-				if (new_table->check_subset_improvable(anticoalition, coalition, new_head, true)==false) {
+				if (new_table->check_subset_improvable(coalition, new_head, true)==false) {
+					new_table->calculate_pivots();
 					//printf("Mask not improvable: ");
 					//new_mask->print();
 					value_memory->add(new_head[w-1]);
@@ -509,6 +452,7 @@ double walk_forward(Table* t, Mask* coalition, Mask* anticoalition, double* head
 			}
 		}
 	}
+	printf("finished walkforward: %i walks\n",refs->length);
 	#if DEBUG==1
 		printf("finished walkforward: %i walkforwards\n",walkbacks);
 	#endif

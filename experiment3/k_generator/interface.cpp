@@ -170,16 +170,11 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printbin(anticoalition);
 		printf("\n");
 	#endif
-	Mask player_mask, anticoalition_player_mask, coalition_player_mask, coalition_mask, anticoalition_mask;
-	player_mask.set_ones(prev_max_table->w-1);
-	anticoalition_player_mask = player_mask;
-	anticoalition_player_mask.A &= (~coalition);
-	coalition_player_mask = player_mask;
-	coalition_player_mask.A &= (~anticoalition);
-	anticoalition_mask.set_zero();
-	anticoalition_mask.A = anticoalition;
+	Mask coalition_mask, anticoalition_mask;
 	coalition_mask.set_zero();
 	coalition_mask.A = coalition;
+	anticoalition_mask.set_zero();
+	anticoalition_mask.A = anticoalition;
 
 	#if DEBUG==1
 		printf("applying coalition\n");
@@ -197,14 +192,14 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	#if DEBUG==1
 		printf("temporary_head manipulated: ");
 		printhead(temporary_head, prev_max_table->w);
-		double simplex_max = simplex(prev_max_table, temporary_head, true);
+		double simplex_max = prev_max_table->simplex(temporary_head, true);
 		printf("simplex maximum: %f\n", simplex_max);
 		printf("pivoted to mask: ");
 		prev_max_table->table_pivot_column_mask->print();
 		prev_max_table->print();
 		printf("about to walk_back from simplex point\n");
 	#else
-		simplex(prev_max_table, temporary_head, true);
+		prev_max_table->simplex(temporary_head, true);
 	#endif
 	
 	#if DEBUG==1
@@ -212,7 +207,8 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	#endif
 	double r;
 	//r = temporary_head[prev_max_table->w-1];
-	//r = walk_back(prev_max_table, &coalition_mask, &anticoalition_player_mask, temporary_head);
+	//r = walk_back(prev_max_table, &coalition_mask, temporary_head);
+	r = walk_forward(prev_max_table, &anticoalition_mask, temporary_head);
 
 	#if DEBUG==1
 		printf("applying anticoalition\n");
@@ -230,14 +226,14 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	#if DEBUG==1
 		printf("temporary_head manipulated: ");
 		printhead(temporary_head, prev_min_table->w);
-		simplex_min = simplex(prev_min_table, temporary_head, true);
+		double simplex_min = prev_min_table->simplex(temporary_head, true);
 		printf("simplex maximum: %f\n", simplex_min);
 		printf("pivoted to mask: ");
 		prev_min_table->table_pivot_column_mask.print();
 		prev_min_table->print();
 		printf("about to walk_back from simplex point\n");
 	#else
-		simplex(prev_min_table, temporary_head, true);
+		prev_min_table->simplex(temporary_head, true);
 	#endif
 	
 	#if DEBUG==1
@@ -245,9 +241,9 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	#endif
 
 	//r += 0.5*r - 0.5*temporary_head[prev_max_table->w-1];
-	//r = 0.5*r - 0.5*walk_back(prev_min_table, &anticoalition_mask, &coalition_player_mask, temporary_head);
-	r = walk_back(prev_min_table, &anticoalition_mask, &coalition_player_mask, temporary_head);
-	//r = walk_forward(prev_min_table, &anticoalition_mask, &coalition_player_mask, temporary_head);
+	//r = 0.5*r - 0.5*walk_back(prev_min_table, &anticoalition_mask, temporary_head);
+	//r = walk_back(prev_min_table, &anticoalition_mask, temporary_head);
+	//r = walk_forward(prev_min_table, &anticoalition_mask, temporary_head);
 	
 	#if DEBUG==1
 		printf("finished %f\n",r);

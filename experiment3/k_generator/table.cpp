@@ -20,10 +20,6 @@ struct Table {
 	void reset_pivot_information();
 	void free_data();
 	void load(Table* t);
-	Table();
-	Table(int w, int h);
-	Table(Table* t);
-	~Table();
 	
 	inline double get(int c, int r);
 	inline void set(int c, int r, double v);
@@ -34,6 +30,8 @@ struct Table {
 	void calculate_pivots();
 	void pivot(Table* t, int pivotable_index);
 	bool check_subset_improvable(Mask* subset_mask, Mask* not_subset_mask, double* head, bool maximising);
+	double simplex(double* head, bool maximising, int iterations);
+	bool simplex_improvable(Table* t, Mask* anti_subset_mask, double* head, bool maximising);
 
 	void print();
 	void print_pivot_info();
@@ -131,29 +129,79 @@ void Table::load(Table* t) {
 	memcpy ( this->pivotable_rows, t->pivotable_rows, sizeof(unsigned char)*wminusonetimesh );
 	memcpy ( this->pivotable_ratios, t->pivotable_ratios, sizeof(double)*wminusonetimesh );
 }
-
-
 void Table::initialise_and_load(Table* t) {
 	this->initialise(t->w,t->h);
 	this->load(t);
 }
 
-Table::Table() {}
-Table::~Table() {
-	this->free_data();
-}
-Table::Table(int w, int h) {
-	this->initialise_and_wipe(w,h);
-}
-Table::Table(Table* t) {
-	this->initialise_and_load(t);
-}
 inline double Table::get(int c, int r) {
 	return (this->data)[c+r*this->w];
 }
 inline void Table::set(int c, int r, double v) {
 	(this->data)[c+r*this->w] = v;
 }
+
+
+
+double Table::simplex(double* head, bool maximising) {
+	if (this->table_pivot_column_number != this->h) {
+		printf("ERROR: simplex method on badly formed table.\n");
+		return -1;
+	}
+	//printf("SIMPLEX INITIALISE\n");
+	int max_int = maximising==true ? 1 : -1;
+	this->calculate_pivots();
+	this->apply_to_head(head,head);
+	masks->add(this->table_pivot_column_mask);
+	while (true) {
+		double best_improvement=0;
+		int best_improvement_index = -1;
+		int smallest_out_column = -1;
+		for (int pivot_index=0; pivot_index < this->pivotable_number; pivot_index++) {
+			double head_value = head[this->pivotable_columns[pivot_index]];
+			if (head_value*max_int < 0) {
+				double ratio = max_int*head_value*this->pivotable_ratios[pivot_index];
+				if (ratio>best_improvement) {
+					best_improvement = ratio;
+					best_improvement_index = pivot_index;
+				} else if ((ratio==0) && (best_improvement_index==-1)) { //bland's rule
+					if (smallest_out_column == -1) {
+						smallest_out_column = this->pivotable_columns[pivot_index];
+						best_improvement_index = pivot_index;
+					} else {
+						if (this->pivotable_columns[pivot_index] < smallest_out_column) {
+							smallest_out_column = this->pivotable_columns[pivot_index];
+							best_improvement_index = pivot_index;
+						}
+					}
+				}
+			}
+		}
+		if (best_improvement_index==-1) { // destinct optima attained
+			break;
+		}
+		//printf("best pivot index %i at %f improvement\n",best_improvement_index,best_improvement);
+		this->pivot(this, best_improvement_index);
+		this->calculate_pivots();
+		this->apply_to_head(head,head);
+		if (best_improvement==0) {
+			if (masks->search(this->table_pivot_column_mask)==true) // if degenerate cycling is occuring in context of bland's rule
+				break;
+			masks->add(this->table_pivot_column_mask);
+		} else {
+			iters++;
+			masks->clear();
+			if ((iterations!=-1)&&(iters>=iterations))
+				break;
+		}
+	}
+	masks->clear();
+	return head[this->w-1];
+}
+
+
+
+
 
 // given a head, apply all pivot column information to it
 void Table::apply_to_head(double* head, double* new_head) {
@@ -291,13 +339,12 @@ void Table::delete_column(int c) {
 }
 
 // for an applied head, can the set of players given by the subset mask succeed in maximising the utility by themselves
-bool Table::check_subset_improvable(Mask* subset_mask, Mask* not_subset_mask, double* head, bool maximising) {
+// TODO: fix several problems, A: dosnt handle degeneracy, B: shouldnt break if there is another viable zero v.
+bool Table::check_subset_improvable(Mask* anti_subset_mask, double* head, bool maximising) {
 	#if DEBUG==1
 		printf("SUBSET IMPROVABLE\n");
-		printf("subset_mask: ");
-		subset_mask->print();
-		printf("not_subset_mask: ");
-		not_subset_mask->print();
+		printf("anti_subset_mask: ");
+		anti_subset_mask->print();
 		printf("table pivotable_columns_mask: ");
 		this->pivotable_columns_mask->print();
 		printf("passed head:\n");
@@ -311,13 +358,14 @@ bool Table::check_subset_improvable(Mask* subset_mask, Mask* not_subset_mask, do
 			if (head[i]<=0)
 				continue;
 		}
-		if ((subset_mask->get_bit(i)==1)&&(this->pivotable_columns_mask->get_bit(i)==1)) {
+		if (anti_subset_mask->get_bit(i)==0) {
+		//if ((subset_mask->get_bit(i)==1)&&(this->pivotable_columns_mask->get_bit(i)==1)) {
 			int j;
 			bool viable = false;
 			for (j=0;j<this->h;j++) {
-				double v = get(i,j);
+				double v = this->get(i,j);
 				if (v>0) {
-					if (not_subset_mask->get_bit(this->table_pivot_columns[j])==1) {
+					if ((this->get(this->w-1,j)==0.0)||(anti_subset_mask->get_bit(this->table_pivot_columns[j])==1)) {
 						break;
 					}
 					viable=true;
@@ -332,4 +380,82 @@ bool Table::check_subset_improvable(Mask* subset_mask, Mask* not_subset_mask, do
 	//printf("returning False\n");
 	return false;
 }
+
+
+bool Table::simplex_improvable(Table* t, Mask* anti_subset_mask, double* head, bool maximising) {
+	//printf("SIMPLEX INITIALISE\n");
+	int max_int = maximising==true ? 1 : -1;
+	//t->calculate_pivots();
+	t->apply_to_head(head,head);
+	masks->add(t->table_pivot_column_mask);
+	int initial = 1;
+	while (true) {
+		double best_improvement=0;
+		int best_improvement_column = -1;
+		for (int i=0;i<t->w-1;i++) {
+			double head_value = head[i];
+			if ((anti_subset_mask->get_bit(i)==0) && (head_value*max_int < 0)) {
+				double best_sub_improvement=0;
+				int best_improvement_row = -1;
+				bool subset_influence = false;
+				bool viable = false;
+				for (int j=0;j<t->h;j++) {
+					double v = this->get(i,j);
+					if (v>0) {
+						if (anti_subset_mask->get_bit(this->table_pivot_columns[j])==1) {
+							subset_influence = true;
+							continue;
+						}
+						viable = true;
+						double ratio = max_int*head_value*this->get(this->w-1,j)/v;
+						if (ratio>best_sub_improvement) {
+							best_sub_improvement = ratio;
+							best_improvement_row = j;
+	//TODO: finish this.
+
+
+		double best_improvement=0;
+		int best_improvement_index = -1;
+		int smallest_out_column = -1;
+		for (int pivot_index=0; pivot_index < this->pivotable_number; pivot_index++) {
+			double head_value = head[this->pivotable_columns[pivot_index]];
+			if (head_value*max_int < 0) {
+				double ratio = max_int*head_value*this->pivotable_ratios[pivot_index];
+				if (ratio>best_improvement) {
+					best_improvement = ratio;
+					best_improvement_index = pivot_index;
+				} else if ((ratio==0) && (best_improvement_index==-1)) { //bland's rule
+					if (smallest_out_column == -1) {
+						smallest_out_column = this->pivotable_columns[pivot_index];
+						best_improvement_index = pivot_index;
+					} else {
+						if (this->pivotable_columns[pivot_index] < smallest_out_column) {
+							smallest_out_column = this->pivotable_columns[pivot_index];
+							best_improvement_index = pivot_index;
+						}
+					}
+				}
+			}
+		}
+		if (best_improvement_index==-1) { // destinct optima attained
+			masks->clear();
+			return 0;
+		} else if (best_improvement==0) {
+			this->pivot(t, best_improvement_index);
+			t=this;
+			this->calculate_pivots();
+			this->apply_to_head(head,head);
+			if (masks->search(this->table_pivot_column_mask)==true) {// if degenerate cycling is occuring in context of bland's rule
+				masks->clear();
+				return 0;
+			}
+			masks->add(this->table_pivot_column_mask);
+		} else {
+			masks->clear();
+			return 1;
+		}
+	}
+}
+
+
 
