@@ -12,6 +12,23 @@ void printhead(double* head, int w) {
 	printf("%f]\n",head[w-1]);
 }
 
+int max_3(int a, int b, int c){
+	if (a>b) {
+		if (a>c) {
+			return a;
+		} else {
+			return c;
+		}
+	} else {
+		if (b>c) {
+			return b;
+		} else {
+			return c;
+		}
+	}
+}
+
+
 #define DOUBLE 1
 #define TRIPPLE 0
 

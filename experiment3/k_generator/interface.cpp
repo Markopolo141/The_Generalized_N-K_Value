@@ -4,7 +4,7 @@
 #define MEMORY_INITIAL_SIZE 131072
 inline double SNAPTOZERO(double a) {return a < TINY ? (-a < TINY ? 0 : a) : a;}
 
-#define DEBUG 0
+#define DEBUG 1
 #define PRUNING 1
 
 #include <utils.cpp>
@@ -18,10 +18,10 @@ PyObject* python_error(const char *ss) {
 }
 
 static PyObject* setup_solver(PyObject* self, PyObject* args) {
-	PyObject *input_array, *input_head;
+	PyObject *ge_array, *le_array, *eq_array, *input_head;
 
-	if (!PyArg_ParseTuple(args, "OO", &input_array, &input_head)) {
-		return python_error("Argument must be a square python array, and a python array, and an integer 1 to enable ts else ts is disabled");
+	if (!PyArg_ParseTuple(args, "OOOO", &le_array, &eq_array, &ge_array, &input_head)) {
+		return python_error("Argument must be two 2D python arrays, and a python array");
 	}
 
 	#if DEBUG==1
@@ -29,64 +29,26 @@ static PyObject* setup_solver(PyObject* self, PyObject* args) {
 		printf("FREEING ANY PREVIOUS MEMORY\n");
 	#endif
 	free_memory();
-	primary_setup_memory();
 	
-	int h = 0;
-	int w = 0;
 	int artificial_variables = 0;
-	int slackness_variables = 0;
-	int excess_variables = 0;
-	Mask invert_mask;
-	Mask slackness_mask;
-	Mask excess_mask;
-	Mask artificial_mask;
-
-	// analyse submitted structure from pyobject for details about rows and columns and their masks
-	if (analyse_pyobject_table(
-		input_array,
-		&w,
-		&h,
-		&invert_mask,
-		&slackness_mask,
-		&excess_mask,
-		&artificial_mask,
+	int* slackness_columns;
+	// analyze tables and parse them into a single table with slack,excess and artificial variables.
+	t = analyse_pyobject_tables(
+		le_array,
+		eq_array,
+		ge_array,
 		&artificial_variables,
-		&slackness_variables,
-		&excess_variables)==-1)
+		&slackness_columns,
+		&players);
+	if (t==NULL)
 		return NULL;
 
 	#if DEBUG==1
-		printf("Analysed table:\n\tw=%i\th=%i\tSV=%i\tEV=%i\tAV=%i\n",w,h,slackness_variables, excess_variables, artificial_variables);
-		printf("\tInvert: \t");
-		invert_mask.print();
-		printf("\tSlackness:\t");
-		slackness_mask.print();
-		printf("\tExcess: \t");
-		excess_mask.print();
-		printf("\tArtificial:\t");
-		artificial_mask.print();
-	#endif
-
-	// actually construct the table from the pyobject using analysed structure, additionally determine the slackness columns
-	int* slackness_columns;
-	t = construct_table_from_analysis(
-		input_array,
-		w,
-		h,
-		invert_mask,
-		slackness_mask,
-		excess_mask,
-		artificial_mask,
-		artificial_variables,
-		slackness_variables,
-		excess_variables,
-		&slackness_columns);
-
-	#if DEBUG==1
+		printf("Analysed table:\n\tw=%i\th=%i\tAV=%i\n",t->w,t->h,artificial_variables);
 		printf("\nTable Loaded:\n");
 		t->print();
 		printf("Slackness Columns:\n");
-		for (int j=0; j<h; j++) printf("row %i, column %i\n",j,slackness_columns[j]);
+		for (int j=0; j<t->h; j++) printf("row %i, column %i\n",j,slackness_columns[j]);
 	#endif
 	
 	// do simplex on artificial variables to determine initial feasible solution
@@ -118,7 +80,7 @@ static PyObject* setup_solver(PyObject* self, PyObject* args) {
 	#if DEBUG==1
 		printf("Loading Solver Working Memory\n");
 	#endif
-	setup_memory(t,w-2);
+	setup_memory(t);
 
 	#if DEBUG==1
 		printf("SETTING UP HEAD\n");
@@ -202,13 +164,13 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		prev_max_table->simplex(temporary_head, true);
 	#endif
 	
-	#if DEBUG==1
+	/*#if DEBUG==1
 		printf("about to walkback on coalition\n");
 	#endif
 	double r;
 	//r = temporary_head[prev_max_table->w-1];
 	//r = walk_back(prev_max_table, &coalition_mask, temporary_head);
-	r = walk_forward(prev_max_table, &anticoalition_mask, temporary_head);
+	r = walk_forward(prev_max_table, &anticoalition_mask, temporary_head);*/
 
 	#if DEBUG==1
 		printf("applying anticoalition\n");
@@ -219,7 +181,7 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printf("new temporary_head: ");
 		printhead(temporary_head, prev_min_table->w);
 		printf("about to simplex from mask: ");
-		prev_min_table->table_pivot_column_mask.print();
+		prev_min_table->table_pivot_column_mask->print();
 	#endif
 	
 	prev_min_table->apply_to_head(temporary_head,temporary_head);
@@ -229,14 +191,14 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		double simplex_min = prev_min_table->simplex(temporary_head, true);
 		printf("simplex maximum: %f\n", simplex_min);
 		printf("pivoted to mask: ");
-		prev_min_table->table_pivot_column_mask.print();
+		prev_min_table->table_pivot_column_mask->print();
 		prev_min_table->print();
 		printf("about to walk_back from simplex point\n");
 	#else
 		prev_min_table->simplex(temporary_head, true);
 	#endif
 	
-	#if DEBUG==1
+	/*#if DEBUG==1
 		printf("about to walkback on anticoalition\n");
 	#endif
 
@@ -249,7 +211,8 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printf("finished %f\n",r);
 	#endif
 
-	return PyFloat_FromDouble(r);
+	return PyFloat_FromDouble(r);*/
+	return PyFloat_FromDouble(1);
 }
 
 
