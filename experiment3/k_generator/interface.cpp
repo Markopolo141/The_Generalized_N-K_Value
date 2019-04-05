@@ -101,6 +101,12 @@ static PyObject* setup_solver(PyObject* self, PyObject* args) {
 
 
 static PyObject* solve(PyObject* self, PyObject* args) {
+	Mask player_mask, auxiliary_mask, coalition, anticoalition;
+	player_mask.set_ones(players);
+	auxiliary_mask.set_ones(t->w);
+	auxiliary_mask.set(auxiliary_mask^player_mask);
+	coalition.set_zero();
+	anticoalition.set_zero();
 	#if DEBUG==1
 		printf("SOLVING\n");
 	#endif
@@ -115,124 +121,62 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	obj = PyTuple_GetItem(args,0);
 	if (PyNumber_Check(obj) != 1)
 		return python_error("Non-numeric argument.");
-	unsigned long coalition = PyLong_AsUnsignedLong(PyNumber_Long(obj));
-	unsigned long anticoalition, mask;
+	coalition.A = PyLong_AsUnsignedLong(PyNumber_Long(obj));
 	if (PyErr_Occurred()!= NULL)
 		return python_error("Non-numeric argument...");
+	if ((player_mask&coalition).non_zero())
+		return python_error("coalition too big!");
+	anticoalition.set((player_mask^coalition)|auxiliary_mask);
+	coalition.set(coalition|auxiliary_mask);
 	
 	#if DEBUG==1
-		printf("original coalition: \t");
-		printbin(coalition);
-		printf("\n");
+		printf("coalition: \t");
+		coalition.print();
+		printf("anticoalition: \t");
+		coalition.print();
+		printf("player_mask: \t");
+		player_mask.print();
+		printf("auxiliary_mask: \t");
+		auxiliary_mask.print();
 	#endif
-	if (analyse_coalition(&coalition,&anticoalition,&mask)==-1)
-		return python_error("coalition too big!");
-	#if DEBUG==1
-		printf("analysed anticoalition:\t");
-		printbin(anticoalition);
-		printf("\n");
-	#endif
-	Mask coalition_mask, anticoalition_mask;
-	coalition_mask.set_zero();
-	coalition_mask.A = coalition;
-	anticoalition_mask.set_zero();
-	anticoalition_mask.A = anticoalition;
 
 	#if DEBUG==1
 		printf("applying coalition\n");
 	#endif
-	apply_coalition(coalition);
+	for (int i=0; i< t->w; i++)
+		temporary_head[i] = -(2*(coalition.get_bit(i))-1)*master_head[i];
 
 	#if DEBUG==1
 		printf("new temporary_head: ");
-		printhead(temporary_head, prev_max_table->w);
-		printf("about to simplex from mask: ");
-		prev_max_table->table_pivot_column_mask->print();
+		printhead(temporary_head, t->w);
+		printf("about to compute on coalition\n");
 	#endif
 	
-	prev_max_table->apply_to_head(temporary_head,temporary_head);
+	double r = 0;
+	r += 0.5*bilevel_solve(prev_min_table, &anticoalition, temporary_head, true);
 	#if DEBUG==1
-		printf("temporary_head manipulated: ");
-		printhead(temporary_head, prev_max_table->w);
-		double simplex_max = prev_max_table->simplex(temporary_head, true);
-		printf("simplex maximum: %f\n", simplex_max);
-		printf("pivoted to mask: ");
-		prev_max_table->table_pivot_column_mask->print();
-		prev_max_table->print();
-		printf("about to walk_back from simplex point\n");
-	#else
-		prev_max_table->simplex(temporary_head, true);
+		printf("about to compute on anticoalition\n");
 	#endif
+	r += 0.5*bilevel_solve(prev_max_table, &coalition, temporary_head, false);
 	
-	/*#if DEBUG==1
-		printf("about to walkback on coalition\n");
-	#endif
-	double r;
-	//r = temporary_head[prev_max_table->w-1];
-	//r = walk_back(prev_max_table, &coalition_mask, temporary_head);
-	r = walk_forward(prev_max_table, &anticoalition_mask, temporary_head);*/
-
-	#if DEBUG==1
-		printf("applying anticoalition\n");
-	#endif
-	apply_coalition(anticoalition);
-
-	#if DEBUG==1
-		printf("new temporary_head: ");
-		printhead(temporary_head, prev_min_table->w);
-		printf("about to simplex from mask: ");
-		prev_min_table->table_pivot_column_mask->print();
-	#endif
-	
-	prev_min_table->apply_to_head(temporary_head,temporary_head);
-	#if DEBUG==1
-		printf("temporary_head manipulated: ");
-		printhead(temporary_head, prev_min_table->w);
-		double simplex_min = prev_min_table->simplex(temporary_head, true);
-		printf("simplex maximum: %f\n", simplex_min);
-		printf("pivoted to mask: ");
-		prev_min_table->table_pivot_column_mask->print();
-		prev_min_table->print();
-		printf("about to walk_back from simplex point\n");
-	#else
-		prev_min_table->simplex(temporary_head, true);
-	#endif
-	
-	/*#if DEBUG==1
-		printf("about to walkback on anticoalition\n");
-	#endif
-
-	//r += 0.5*r - 0.5*temporary_head[prev_max_table->w-1];
-	//r = 0.5*r - 0.5*walk_back(prev_min_table, &anticoalition_mask, temporary_head);
-	//r = walk_back(prev_min_table, &anticoalition_mask, temporary_head);
-	//r = walk_forward(prev_min_table, &anticoalition_mask, temporary_head);
-	
-	#if DEBUG==1
-		printf("finished %f\n",r);
-	#endif
-
-	return PyFloat_FromDouble(r);*/
-	return PyFloat_FromDouble(1);
+	return PyFloat_FromDouble(r);
 }
-
-
 
 static PyObject* spruik(PyObject* self, PyObject* args) {
 	prev_max_table->load(t);
 	prev_min_table->load(t);
-	
+	return PyFloat_FromDouble(1);
+}
+static PyObject* destroy(PyObject* self, PyObject* args) {
+	free_memory();
 	return PyFloat_FromDouble(1);
 }
 
 
-
-
-static char setup_solver_docs[] =
-	"setup_solver(): does all the setup for the solver apparatus, conducting Phase I feasibility solving and initialising all memory.\n";
-static char solve_docs[] =
-	"solve(): for a coalition calculate the minimax value.\n";
-static char spruik_docs[] =
-	"asdfas.\n";
+static char setup_solver_docs[] = "setup_solver(): does all the setup for the solver apparatus, conducting Phase I feasibility solving and initialising all memory.\n";
+static char solve_docs[] = "solve(): for a coalition calculate the minimax value.\n";
+static char spruik_docs[] = "asdfas.\n";
+static char destroy_docs[] = "frees all memory.\n";
 
 static PyMethodDef bilevel_solver_funcs[] = {
 	{"setup_solver", (PyCFunction)setup_solver, 
@@ -241,9 +185,10 @@ static PyMethodDef bilevel_solver_funcs[] = {
 		METH_VARARGS, solve_docs},
 	{"spruik", (PyCFunction)spruik, 
 		METH_NOARGS, spruik_docs},
+	{"destroy", (PyCFunction)destroy, 
+		METH_NOARGS, destroy_docs},
 		{NULL}
 };
-
 extern "C" {
 	void initbilevel_solver(void) {
 		Py_InitModule("bilevel_solver", bilevel_solver_funcs);

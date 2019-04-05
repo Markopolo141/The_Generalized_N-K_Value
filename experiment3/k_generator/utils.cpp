@@ -80,6 +80,28 @@ class Mask {
 		#endif
 		return m2;
 	}
+	inline Mask operator^(const Mask& m) {
+		Mask m2;
+		m2.A = (this->A)^(m.A);
+		#if DOUBLE==1
+			m2.B = (this->B)^(m.B);
+			#if TRIPPLE==1
+				m2.C = (this->C)^(m.C);
+			#endif
+		#endif
+		return m2;
+	}
+	inline Mask operator|(const Mask& m) {
+		Mask m2;
+		m2.A = (this->A)|(m.A);
+		#if DOUBLE==1
+			m2.B = (this->B)|(m.B);
+			#if TRIPPLE==1
+				m2.C = (this->C)|(m.C);
+			#endif
+		#endif
+		return m2;
+	}
 	inline void set_zero() {
 		this->A = 0;
 		#if DOUBLE==1
@@ -104,6 +126,15 @@ class Mask {
 			this->B = m->B;
 			#if TRIPPLE==1
 				this->C = m->C;
+			#endif
+		#endif
+	}
+	inline void set(Mask m) {
+		this->A = m.A;
+		#if DOUBLE==1
+			this->B = m.B;
+			#if TRIPPLE==1
+				this->C = m.C;
 			#endif
 		#endif
 	}

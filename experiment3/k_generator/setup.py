@@ -13,6 +13,5 @@ module = Extension('bilevel_solver',
 			#extra_link_args=['-O3']
 )
 
-
 setup(name='bilevel_solver', version='1.0',  \
       ext_modules=[module])

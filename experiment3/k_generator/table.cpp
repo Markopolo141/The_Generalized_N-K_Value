@@ -34,9 +34,9 @@ struct Table {
 	double simplex(double* head, bool maximising); // conduct a full simplex to the table.
 	bool simplex_improve(double* head, int max_int, Mask_Memory* masks, double* best_improvement, int* best_improvement_index); // do degenerate pivots until the first nondegenerate simplex step (if possible)
 
-	void print();
-	void print_pivot_info();
-	void print_pivotable_info();
+	void print(); // print table itself
+	void print_pivot_info(); // debug info on table pivot columns
+	void print_pivotable_info(); // debug info on pivotable column info attached to table
 };
 
 void Table::print() {

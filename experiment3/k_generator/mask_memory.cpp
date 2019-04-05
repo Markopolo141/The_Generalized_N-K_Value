@@ -45,6 +45,7 @@ void Mask_Memory::destroy() {
 }
 void Mask_Memory::setup(size_t mem_size) {
 	this->mem_size = mem_size;
+	this->length = 0;
 	this->memory = (Mask*)malloc(sizeof(Mask)*mem_size);
 	if (this->memory==NULL)
 		printf("ERROR: allocating memory failure\n");
