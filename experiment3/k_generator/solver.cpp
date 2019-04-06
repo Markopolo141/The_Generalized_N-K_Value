@@ -106,8 +106,14 @@ double bilevel_solve(Table* t, Mask* anti_subset_mask, double* head, bool maximi
 	int max_int = maximising==true ? 1 : -1;
 	t->simplex(head, !maximising);
 	for (int i=0; i<t->w-1; i++)
-		t->set(i,t->h-1,-1*max_int*head[i]);
-	t->set(t->w-1,t->h-1,head[t->w-1]);
+		t->set(i,t->h-1,SNAPTOZERO(-1*max_int*head[i]));
+	t->set(t->w-1,t->h-1,SNAPTOZERO(head[t->w-1]));
+	t->set(t->w-2,t->h-1,1.0);
+	t->table_pivot_columns[t->h-1]=t->w-2;
+	t->table_pivot_column_number += 1;
+	t->table_pivot_column_mask->set_bit(t->w-2,1);
+	t->calculate_pivots();
+	
 	Table* initial_t = t;
 	double* temp_head = (double*)malloc(sizeof(double)*(t->w));
 	Table_Memory* table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
@@ -117,20 +123,28 @@ double bilevel_solve(Table* t, Mask* anti_subset_mask, double* head, bool maximi
 	plus_masks->setup(MEMORY_INITIAL_SIZE);
 	neutral_masks->setup(MEMORY_INITIAL_SIZE);
 	Mask new_mask;
-	bool refresh = false;
+	bool refresh;
+
+	printhead(head,t->w);
+	t->print();
+	t->print_pivot_info();
+	t->print_pivotable_info();
 	while (true) {
+		refresh=false;
 		for (int i=0; i<t->pivotable_number; i++)
 			if (t->pivotable_ratios[i] * max_int > 0) {
 				new_mask.set(t->table_pivot_column_mask);
 				new_mask.flip_bit(t->pivotable_columns[i]);
 				if (t->pivotable_rows[i] != -1)
 					new_mask.flip_bit(t->table_pivot_columns[t->pivotable_rows[i]]);
+				new_mask.print();
 				if (plus_masks->search(&new_mask)==false) {
 					Table* tt = (Table*)malloc(sizeof(Table));
 					tt->initialise(t->w,t->h);
 					tt->pivot(t,i);
-					tt->apply_to_head(temp_head,head);
+					tt->apply_to_head(head,temp_head);
 					if (tt->check_subset_improvable(anti_subset_mask, temp_head, !maximising)) {
+						printf("pivot %i is improvement\n",i);
 						tt->calculate_pivots();
 						table_refs->free_all();
 						if (t!=initial_t) {
@@ -150,6 +164,7 @@ double bilevel_solve(Table* t, Mask* anti_subset_mask, double* head, bool maximi
 					}
 				}
 			}
+	return 0;
 		if (refresh==false) {
 			for (int i=0; i<t->pivotable_number; i++)
 				if (t->pivotable_ratios[i]==0) {
@@ -175,6 +190,7 @@ double bilevel_solve(Table* t, Mask* anti_subset_mask, double* head, bool maximi
 			t = table_refs->memory[table_refs->length-1];
 			table_refs->length -= 1;
 		}
+
 	}
 	table_refs->destroy();
 	plus_masks->destroy();
@@ -182,7 +198,7 @@ double bilevel_solve(Table* t, Mask* anti_subset_mask, double* head, bool maximi
 	free(table_refs);
 	free(plus_masks);
 	free(neutral_masks);
-	t->apply_to_head(temp_head,head);
+	t->apply_to_head(head,temp_head);
 	if (t!=initial_t) {
 		t->free_data();
 		free(t);

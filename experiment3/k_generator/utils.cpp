@@ -1,3 +1,7 @@
+
+
+inline double SNAPTOZERO(double a) {return a < TINY ? (-a < TINY ? 0 : a) : a;}
+
 void printbin(unsigned long a) {
 	while (a != 0){
 		printf("%li",a&1);

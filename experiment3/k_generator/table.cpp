@@ -13,6 +13,7 @@ struct Table {
 	double* pivotable_ratios; // the per-unit improvement of pivoting from the respective pivot point
 	Mask* pivotable_columns_mask; // the binary mask of pivotable columns
 	int pivotable_number; // the number potential pivot points.
+	bool need_to_recalculate_pivotable; // a flag that is raised to indicate whether the calculate_pivots needs tobe called
 	
 	void initialise(int w, int h);
 	void initialise_and_wipe(int w, int h);
@@ -26,7 +27,7 @@ struct Table {
 	void delete_row(int r);
 	void delete_column(int c, double* head);
 	
-	void apply_to_head(double* head, double* new_head); // for a given head, apply the pivot rows to the head to make it consisten with the table
+	void apply_to_head(double* head, double* new_head); // for a given head, apply the pivot rows to the head to make it consistent with the table
 	void calculate_pivots(); // scan through the table and select all the viable pivot points
 	void pivot(Table* t, int pivotable_index); // given table t (which can be -this-) with its pivotable index, mutate this table to be the pivoted result
 	int shallow_check_subset_improvable(Mask* anti_subset_mask, double* head, bool maximising); // scan through this table and detect whether the coalition identified by the anti-subset-mask can improve on a one pass
@@ -77,10 +78,11 @@ void Table::reset_pivot_information() {
 	this->pivotable_columns_mask->set_zero();
 	this->pivotable_number = 0;
 	this->table_pivot_column_number = 0;
+	this->need_to_recalculate_pivotable = true;
 }
 
 void Table::initialise(int w, int h) {
-	int wminusonetimesh = (w-1)*h;
+	/*int wminusonetimesh = (w-1)*h;
 	this->data = (double*)malloc(sizeof(double)*w*h);
 	this->w = w;
 	this->h = h;
@@ -92,7 +94,8 @@ void Table::initialise(int w, int h) {
 	this->table_pivot_column_mask = (Mask*)malloc(sizeof(Mask));
 	this->pivotable_columns_mask = (Mask*)malloc(sizeof(Mask));
 
-	this->reset_pivot_information();
+	this->reset_pivot_information();*/
+	this->initialise_and_wipe(w, h);
 }
 void Table::initialise_and_wipe(int w, int h) {
 	int wminusonetimesh = (w-1)*h;
@@ -129,6 +132,7 @@ void Table::load(Table* t) {
 	memcpy ( this->pivotable_columns, t->pivotable_columns, sizeof(unsigned char)*wminusonetimesh );
 	memcpy ( this->pivotable_rows, t->pivotable_rows, sizeof(unsigned char)*wminusonetimesh );
 	memcpy ( this->pivotable_ratios, t->pivotable_ratios, sizeof(double)*wminusonetimesh );
+	this->need_to_recalculate_pivotable = t->need_to_recalculate_pivotable;
 }
 void Table::initialise_and_load(Table* t) {
 	this->initialise(t->w,t->h);
@@ -140,9 +144,12 @@ inline double Table::get(int c, int r) {
 }
 inline void Table::set(int c, int r, double v) {
 	(this->data)[c+r*this->w] = v;
+	need_to_recalculate_pivotable = true;
 }
 
 bool Table::simplex_improve(double* head, int max_int, Mask_Memory* masks, double* best_improvement, int* best_improvement_index) {
+	if (this->need_to_recalculate_pivotable==true)
+		printf("WARNING: sub-simplexing on outdated table pivot info\n");
 	masks->clear();
 	masks->add(this->table_pivot_column_mask);
 	while (true) {
@@ -183,9 +190,8 @@ bool Table::simplex_improve(double* head, int max_int, Mask_Memory* masks, doubl
 }
 
 double Table::simplex(double* head, bool maximising) {
-	//if (this->table_pivot_column_number != this->h) {
+	//if (this->table_pivot_column_number != this->h)
 	//	printf("WARNING: simplex method on potentially badly formed table.\n");
-	//}
 	int max_int = maximising==true ? 1 : -1;
 	this->calculate_pivots();
 	this->apply_to_head(head,head);
@@ -263,10 +269,13 @@ void Table::calculate_pivots() {
 	}
 	row_memory->destroy();
 	free(row_memory);
+	this->need_to_recalculate_pivotable = false;
 }
 
 // set this table to be as pivoted from another table by the indexed pivotable point
 void Table::pivot(Table* t, int pivotable_index) {
+	if (this->need_to_recalculate_pivotable==true)
+		printf("WARNING: pivoting on outdated table pivot info\n");
 	int row = t->pivotable_rows[pivotable_index];
 	int column = t->pivotable_columns[pivotable_index];
 	double* pivot_row = &(t->data)[row*this->w];
@@ -313,6 +322,7 @@ void Table::pivot(Table* t, int pivotable_index) {
 	if (t!=this)
 		memcpy ( this->table_pivot_columns, t->table_pivot_columns, sizeof(int)*(this->h) );
 	this->table_pivot_columns[row] = column;
+	this->need_to_recalculate_pivotable = true;
 }
 
 
@@ -329,6 +339,7 @@ void Table::delete_row(int r) {
 		for (int i=0;i<(this->w);i++)
 			this->set(i,j,this->get(i,j+1));
 	this->h -= 1;
+	need_to_recalculate_pivotable = true;
 }
 
 // deletes column c, (not optimised function), do not use on columns that are pivot columns, and recalculate pivotable information after.
@@ -349,6 +360,7 @@ void Table::delete_column(int c, double* head) {
 			if (i>c)
 				head[i-1]=head[i];
 	this->w -= 1;
+	need_to_recalculate_pivotable = true;
 }
 
 // for an applied head, can the set of players given by the anti-subset mask succeed in maximising the utility by themselves
@@ -397,6 +409,8 @@ int Table::shallow_check_subset_improvable(Mask* anti_subset_mask, double* head,
 
 
 bool Table::check_subset_improvable(Mask* anti_subset_mask, double* head, bool maximising) {
+	if (this->table_pivot_column_number != this->h)
+		printf("WARNING: check subset improvable method on table without full pivot set.\n");
 	int shallow_check = this->shallow_check_subset_improvable(anti_subset_mask, head, maximising);
 	if (shallow_check==1) //check if trivially improvable/unimprovable
 		return true;
@@ -415,10 +429,7 @@ bool Table::check_subset_improvable(Mask* anti_subset_mask, double* head, bool m
 	for (int i=t->w-2;i>-1;i--) // cull anticoalition columns (TODO: inefficient)
 		if (anti_subset_mask->get_bit(i)==1)
 			t->delete_column(i,new_head);
-	
-	printf("COMPACTED TABLE:\n");
-	printhead(new_head,t->w);
-	t->print();
+	t->calculate_pivots();
 	
 	Mask_Memory* masks;
 	masks = (Mask_Memory*)calloc(sizeof(Mask_Memory),1);
@@ -426,12 +437,14 @@ bool Table::check_subset_improvable(Mask* anti_subset_mask, double* head, bool m
 	int max_int = maximising==true ? 1 : -1;
 	double best_improvement;
 	int best_improvement_index;
+	
 	bool ret = t->simplex_improve(new_head, max_int, masks, &best_improvement, &best_improvement_index); // see if it is possible to simplex improve one step.
 
 	masks->destroy(); // free data
 	free(masks);
 	t->free_data();
 	free(t);
+	free(new_head);
 
 	return ret;
 }

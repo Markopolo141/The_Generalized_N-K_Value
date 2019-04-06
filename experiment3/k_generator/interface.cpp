@@ -2,7 +2,6 @@
 
 #define TINY 0.000001
 #define MEMORY_INITIAL_SIZE 131072
-inline double SNAPTOZERO(double a) {return a < TINY ? (-a < TINY ? 0 : a) : a;}
 
 #define DEBUG 1
 #define PRUNING 1
