@@ -180,15 +180,16 @@ void test7() {
 }
 void test8() {
 	printf("TEST8\n");
-	double* head = (double*)calloc(sizeof(double),10);
+	double* head = (double*)calloc(sizeof(double),9);
 	Table* t = (Table*)malloc(sizeof(Table));
-	t->initialise_and_wipe(10, 6);
+	t->initialise_and_wipe(9, 5);
 	head[2] = -1;
-	t->set(0,0,1.0);	t->set(1,0,0.0);	t->set(2,0,-0.1);	t->set(3,0,1.0);	t->set(4,0,0.0);	t->set(5,0,0.0);	t->set(6,0,0.0);	t->set(7,0,0.0);	t->set(8,0,0.0);	t->set(9,0,1.0);
-	t->set(0,1,0.0);	t->set(1,1,1.0);	t->set(2,1,-0.1);	t->set(3,1,0.0);	t->set(4,1,1.0);	t->set(5,1,0.0);	t->set(6,1,0.0);	t->set(7,1,0.0);	t->set(8,1,0.0);	t->set(9,1,1.0);
-	t->set(0,2,-0.1);	t->set(1,2,-0.1);	t->set(2,2,1.0);	t->set(3,2,0.0);	t->set(4,2,0.0);	t->set(5,2,1.0);	t->set(6,2,0.0);	t->set(7,2,0.0);	t->set(8,2,0.0);	t->set(9,2,1.0);
-	t->set(0,3,0.5);	t->set(1,3,0.2);	t->set(2,3,1.0);	t->set(3,3,0.0);	t->set(4,3,0.0);	t->set(5,3,0.0);	t->set(6,3,1.0);	t->set(7,3,0.0);	t->set(8,3,0.0);	t->set(9,3,1.5);
-	t->set(0,4,0.2);	t->set(1,4,0.5);	t->set(2,4,1.0);	t->set(3,4,0.0);	t->set(4,4,0.0);	t->set(5,4,0.0);	t->set(6,4,0.0);	t->set(7,4,1.0);	t->set(8,4,0.0);	t->set(9,4,1.4);
+
+	t->set(0,0,1.0);	t->set(1,0,0.0);	t->set(2,0,-0.1);	t->set(3,0,1.0);	t->set(4,0,0.0);	t->set(5,0,0.0);	t->set(6,0,0.0);	t->set(7,0,0.0);	t->set(8,0,1.0);
+	t->set(0,1,0.0);	t->set(1,1,1.0);	t->set(2,1,-0.1);	t->set(3,1,0.0);	t->set(4,1,1.0);	t->set(5,1,0.0);	t->set(6,1,0.0);	t->set(7,1,0.0);	t->set(8,1,1.0);
+	t->set(0,2,-0.1);	t->set(1,2,-0.1);	t->set(2,2,1.0);	t->set(3,2,0.0);	t->set(4,2,0.0);	t->set(5,2,1.0);	t->set(6,2,0.0);	t->set(7,2,0.0);	t->set(8,2,1.0);
+	t->set(0,3,0.5);	t->set(1,3,0.2);	t->set(2,3,1.0);	t->set(3,3,0.0);	t->set(4,3,0.0);	t->set(5,3,0.0);	t->set(6,3,1.0);	t->set(7,3,0.0);	t->set(8,3,1.5);
+	t->set(0,4,0.2);	t->set(1,4,0.5);	t->set(2,4,1.0);	t->set(3,4,0.0);	t->set(4,4,0.0);	t->set(5,4,0.0);	t->set(6,4,0.0);	t->set(7,4,1.0);	t->set(8,4,1.4);
 	t->table_pivot_column_number = 5;
 	t->table_pivot_column_mask->A = 8+16+32+64+128;
 	t->table_pivot_columns[0] = 3;
@@ -199,26 +200,23 @@ void test8() {
 
 	Mask mask;
 	mask.set_zero();
-	mask.A = 4;
+	mask.A = 3;
 	mask.print();
 
 	printhead(head,t->w);
 	t->print();
 	t->calculate_pivots();
+	t->print_pivot_info();
 	t->print_pivotable_info();
 	printf("pivoting for non-zero z\n");
 	t->pivot(t,2);
 	t->apply_to_head(head,head);
-
-	printf("\nABOUT TO BILEVEL SOLVE\n");
+	printf("\nBILEVEL SOLVING, should be 0.952381\n");
 	
-	printhead(head,t->w);
-	t->print();
-	t->print_pivot_info();
-	
+	for (int i=0; i<10; i++)
 	printf("bilevel_solve: %f\n", bilevel_solve(t, &mask, head, true));
 
-
+	printf("\n\nBILEVEL SOLVE COMPLETE\n");
 	printhead(head,t->w);
 	t->print();
 	t->print_pivot_info();

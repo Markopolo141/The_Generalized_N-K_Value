@@ -230,6 +230,8 @@ void Table::apply_to_head(double* head, double* new_head) {
 			}
 		}
 	}
+	for (int i=0;i<w;i++)
+		new_head[i] = SNAPTOZERO(new_head[i]);
 }
 
 // calculate all the potential pivot columns and calculate the ratios by which the pivoting will improve the objective
@@ -274,8 +276,8 @@ void Table::calculate_pivots() {
 
 // set this table to be as pivoted from another table by the indexed pivotable point
 void Table::pivot(Table* t, int pivotable_index) {
-	if (this->need_to_recalculate_pivotable==true)
-		printf("WARNING: pivoting on outdated table pivot info\n");
+	if (t->need_to_recalculate_pivotable==true)
+		printf("WARNING: pivoting from outdated table pivot info\n");
 	int row = t->pivotable_rows[pivotable_index];
 	int column = t->pivotable_columns[pivotable_index];
 	double* pivot_row = &(t->data)[row*this->w];
@@ -377,6 +379,7 @@ int Table::shallow_check_subset_improvable(Mask* anti_subset_mask, double* head,
 		printhead(head,this->w);
 	#endif
 	bool unviable = true;
+	//printf("shallow: initialise\n");
 	for (int i=0;i<this->w-1;i++) {
 		if (maximising==true) {
 			if (head[i]>=0)
@@ -387,14 +390,19 @@ int Table::shallow_check_subset_improvable(Mask* anti_subset_mask, double* head,
 		}
 		if (anti_subset_mask->get_bit(i)==0) {
 		//if ((subset_mask->get_bit(i)==1)&&(this->pivotable_columns_mask->get_bit(i)==1)) {
+			//printf("shallow: checking %i\n",i);
 			int j;
 			bool viable = false;
 			for (j=0;j<this->h;j++) {
+				//printf("shallow: checking row %i\n",i);
 				double v = this->get(i,j);
 				if (v>0) {
+					//printf("shallow: checked >0\n");
 					unviable=false;
-					if ((this->get(this->w-1,j)==0.0)||(anti_subset_mask->get_bit(this->table_pivot_columns[j])==1))
+					if ((this->get(this->w-1,j)==0.0)||(anti_subset_mask->get_bit(this->table_pivot_columns[j])==1)) {
+						//printf("shallow: check break\n");
 						break;
+					}
 					viable=true;
 				}
 			}
@@ -411,12 +419,14 @@ int Table::shallow_check_subset_improvable(Mask* anti_subset_mask, double* head,
 bool Table::check_subset_improvable(Mask* anti_subset_mask, double* head, bool maximising) {
 	if (this->table_pivot_column_number != this->h)
 		printf("WARNING: check subset improvable method on table without full pivot set.\n");
+	//printf("shallow check\n");
 	int shallow_check = this->shallow_check_subset_improvable(anti_subset_mask, head, maximising);
 	if (shallow_check==1) //check if trivially improvable/unimprovable
 		return true;
 	if (shallow_check==-1)
 		return false;
 	// otherwise perform more comprehensive check.
+	//printf("comprehensive check\n");
 
 	Table* t = (Table*)malloc(sizeof(Table)); // create dataspace for compacted table
 	t->initialise_and_load(this);
@@ -438,6 +448,10 @@ bool Table::check_subset_improvable(Mask* anti_subset_mask, double* head, bool m
 	double best_improvement;
 	int best_improvement_index;
 	
+	//printhead(new_head,t->w);
+	//t->print();
+	//t->print_pivot_info();
+	//t->print_pivotable_info();
 	bool ret = t->simplex_improve(new_head, max_int, masks, &best_improvement, &best_improvement_index); // see if it is possible to simplex improve one step.
 
 	masks->destroy(); // free data
