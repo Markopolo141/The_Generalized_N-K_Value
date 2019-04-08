@@ -1,5 +1,16 @@
 
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 def RepresentsInt(s):
     try: 
         int(s)
@@ -11,7 +22,7 @@ import pdb
 from random import randint
 import sys
 
-'''mat = [
+mat = [
 [0,0,-1],
 [1,0,-0.1],
 [0,1,-0.1],
@@ -19,9 +30,9 @@ import sys
 [0.5,0.2,1],
 [0.2,0.5,1],
 ]
-mat2 = [0,1,1,1,1.5,1.4]'''
+mat2 = [0,1,1,1,1.5,1.4]
 
-mat = [
+'''mat = [
 [0.000000,	-0.476190,	0.000000,	0.000000,	0.952381,	0.000000,	0.000000],
 [0.000000,	0.285714,	0.000000,	0.000000,	-0.971429,	1.000000,	0.000000],
 [0.000000,	-0.047619,	1.000000,	0.000000,	0.095238,	0.000000,	0.000000],
@@ -38,9 +49,10 @@ mat2 = [
 0.0,
 0.952381,
 0.095238
-]
+]'''
 
-adding_constraints = False
+
+adding_constraints = True
 eqns = len(mat)
 num_1 = len(mat[0])
 num_2 = 0
@@ -70,8 +82,22 @@ def parse_int(st):
 
 while True:
 	print "\t{}".format("\t".join([" _{}_".format(i) for i in range(num_1+num_2+num_s+1)]))
-	for i,m in enumerate(mat):
-		print "   :{}\t{}\t|".format(i,"\t".join(["|{0:.2f}".format(mm) for mm in m]))
+	pivots = []
+	for i in range(len(mat[0])-1):
+		pivots.append([0,])
+		minv = float("inf")
+		for j in range(1,len(mat)):
+			pivots[-1].append(0)
+			if mat[j][i]>0:
+				v = mat[j][len(mat[0])-1]/mat[j][i]
+				if abs(minv-v)<0.00001:
+					pivots[-1][-1]=1
+				elif v<minv:
+					minv=v
+					pivots[-1] = [0 for p in pivots[-1]]
+					pivots[-1][-1]=1
+	for j,m in enumerate(mat):
+		print "   :{}\t{}\t|".format(j,"\t".join(["|{0}{1:.2f}{2}".format(bcolors.WARNING if (i<len(mat[0])-1 and pivots[i][j]==1) else "",mm,bcolors.ENDC if (i<len(mat[0])-1 and pivots[i][j]==1) else "") for i,mm in enumerate(m)]))
 	#r2 = int(raw_input("which target_row: "))
 	c = parse_int("which column: ")
 	r = parse_int("which source_row: ")

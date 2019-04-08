@@ -31,6 +31,7 @@ void Reference_Memory::destroy() {
 void Reference_Memory::setup(size_t mem_size) {
 	this->mem_size = mem_size;
 	this->memory = (void**)malloc(sizeof(void*)*mem_size);
+	this->length = 0;
 	if (this->memory==NULL)
 		printf("ERROR: allocating memory failure\n");
 }
