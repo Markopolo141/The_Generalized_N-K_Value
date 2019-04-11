@@ -43,13 +43,14 @@ def get_matrix_formulation(raw_branches, busses):
 	mmm = np.identity(len(busses)) - np.matrix(m_delete)*np.matrix(m_inverse)
 	mmm = np.asarray(mmm)
 	mmm_strings = []
-	constraints = []
+	eq_constraints = []
+	le_constraints = []
 	for i in range(len(busses)):
 		terms = mmm[i,]
 		normaliser =  float_gcd(terms.tolist(),0.000001)
 		terms = (terms*normaliser).round(6).astype(int)
 		if str(terms) not in mmm_strings:
-			constraints.append(terms.tolist() +[0,0])
+			eq_constraints.append(terms.tolist() +[0])
 			mmm_strings.append(str(terms))
 	for br in branches:
 		impedance = max(br[2],0.0000001)
@@ -58,9 +59,9 @@ def get_matrix_formulation(raw_branches, busses):
 		terms = (terms*normaliser).round(6).astype(int)
 		br3 = int(round(br[3]*normaliser,6))
 		#br3 = br[3]
-		constraints.append((-terms).tolist() + [br3,-1])
-		constraints.append(terms.tolist() + [br3,-1])
-	return constraints
+		le_constraints.append((-terms).tolist() + [br3])
+		le_constraints.append(terms.tolist() + [br3])
+	return eq_constraints,le_constraints
 
 
 
@@ -83,52 +84,33 @@ def get_cost_functions(busses,gens,gen_costs):
 
 
 
-
-
-
-#with open("0.json","r") as f:
-#	ppc = json.load(f)
-#
-#costs,single_defs = get_cost_functions(ppc['bus'],ppc['gen'],ppc['gencost'])
-#invert_power_flow = [1 if a['lower']==0 else -1 for a in single_defs]
-#constraints = get_matrix_formulation(ppc['branch'],ppc['bus'])
-#for i,v in enumerate(invert_power_flow):
-#	costs[i] *= v
-#	for c in constraints:
-#		c[i] *= v
-#	if v==-1:
-#		single_defs[i]['lower'],single_defs[i]['upper'] = single_defs[i]['upper'],-single_defs[i]['lower']
-#single_constraints = [[0 if ii!=i else 1 for ii in range(len(costs))]+[single_defs[i]['upper'],-1] for i in range(len(costs))]
-#print costs
-#print single_defs
-#print single_constraints
-#print constraints
-#
-#import sys
-#sys.exit(0)
-
-
 import bilevel_solver
 
 def setup(ppc):
 	costs,single_defs = get_cost_functions(ppc['bus'],ppc['gen'],ppc['gencost'])
 	invert_power_flow = [1 if a['lower']==0 else -1 for a in single_defs]
-	constraints = get_matrix_formulation(ppc['branch'],ppc['bus'])
+	eq_constraints,le_constraints = get_matrix_formulation(ppc['branch'],ppc['bus'])
 	for i,v in enumerate(invert_power_flow):
 		costs[i] *= v
-		for c in constraints:
+		for c in eq_constraints:
+			c[i] *= v
+		for c in le_constraints:
 			c[i] *= v
 		if v==-1:
 			single_defs[i]['lower'],single_defs[i]['upper'] = single_defs[i]['upper'],-single_defs[i]['lower']
-	single_constraints = [[0 if ii!=i else 1 for ii in range(len(costs))]+[single_defs[i]['upper'],-1] for i in range(len(costs))]
-	bilevel_solver.setup_solver(constraints+single_constraints,costs)
+	single_constraints = [[0 if ii!=i else 1 for ii in range(len(costs))]+[single_defs[i]['upper']] for i in range(len(costs))]
+	le_constraints += single_constraints
+	for i,e in enumerate(eq_constraints):
+		if False not in [ee<=0 for ee in e]:
+			eq_constraints[i] = [-ee for ee in eq_constraints[i]] 
+	bilevel_solver.setup_solver(le_constraints,eq_constraints,[],costs)
 
 maxmin_minmax_call_count = 0
 def calc_maxmin_minmax(i):
 	global maxmin_minmax_call_count
 	maxmin_minmax_call_count += 1
-	if (maxmin_minmax_call_count%5==0):
-		#bilevel_solver.spruik()
+	if (maxmin_minmax_call_count%9==0):
+		bilevel_solver.spruik()
 		pass
 	return bilevel_solver.solve(i)
 

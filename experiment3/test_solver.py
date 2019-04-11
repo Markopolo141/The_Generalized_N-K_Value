@@ -4,6 +4,8 @@ import json
 import time
 from math import sqrt
 from minimax_solver import setup, calc_maxmin_minmax, spruik_solver
+import pdb
+import sys
 
 N = None
 
@@ -22,7 +24,8 @@ def worker(number,data,ppc):
 	seed(32000)
 	m = 100
 	setup(ppc)
-	#v([0,1,2,3,4])
+	print v([0,1,2])
+	sys.exit(0)
 	listi = list(range(N))
 	shuffle(listi)
 	#spruik_solver()

@@ -6,7 +6,6 @@
 #include "table.cpp"
 #include "table_memory.cpp"
 #include "sorted_list.cpp"
-#include "reference_memory.cpp"
 
 Table* t = NULL;
 Table* prev_max_table = NULL;
@@ -96,12 +95,12 @@ void equation_pruning(Table* t, int* slackness_columns) {
 
 double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximising) {
 	#if DEBUG==1
-		printf("BILEVEL SOLVE: anti_coalition: ");
+		printf("BILEVEL SOLVE: coalition: ");
 		coalition_mask->print();
 		printhead(head, t->w);
 		t->table_pivot_column_mask->print();
 		t->print();
-		int iterations = 0;
+		//int iterations = 0;
 	#endif
 	double* temp_head = (double*)malloc(sizeof(double)*(t->w+1));
 	double* temp_head2 = (double*)malloc(sizeof(double)*(t->w+1));
@@ -118,109 +117,143 @@ double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximisi
 
 	Table* new_t = (Table*)calloc(sizeof(Table),1);
 	new_t->initialise_and_load(t);
-	new_t->data = (double*)realloc(new_t->data, sizeof(double)*(t->w+1)*(t->h+1));
-	new_t->w = t->w+1;
-	new_t->h = t->h+1;
+	new_t->resize_table(t->w+1, t->h+1);
 	for (int j=0; j<t->h; j++) {
 		for (int i=0; i<t->w-1; i++)
 			new_t->set(i,j,t->get(i,j));
 		new_t->set(t->w-1,j,0);
 		new_t->set(t->w,j,t->get(t->w-1,j));
 	}
-	for (int i=0; i<t->w-1; i++)
+	for (int i=0; i<t->w; i++)
 		new_t->set(i,t->h,max_int*temp_head[i]);
-	new_t->set(t->w,t->h,temp_head[t->w-1]);
+	//new_t->set(t->w,t->h,temp_head[t->w-1]);
 	new_t->set(t->w-1,t->h,1.0);
+	new_t->set(t->w,t->h,0.0);
 	new_t->table_pivot_columns[t->h]=t->w-1;
 	new_t->table_pivot_column_number += 1;
 	new_t->table_pivot_column_mask->set_bit(t->w-1,1);
 	new_t->calculate_pivots();
 	temp_head[t->w] = temp_head[t->w-1];
 	temp_head[t->w-1]=0;
-	
+
 	t=new_t;
 	Mask new_mask;
 	bool refresh;
 
 	neutral_masks->add(t->table_pivot_column_mask);
 	
-	/*printhead(temp_head,t->w);
-	t->print();
-	t->print_pivot_info();
-	t->print_pivotable_info();*/
+	#if DEBUG==1
+		printf("BILEVEL SOLVE BEGIN\n");
+		printhead(temp_head,t->w);
+		t->print();
+		t->print_pivot_info();
+		t->print_pivotable_info();
+	#endif
 
 	while (true) {
 		refresh=false;
 		for (int i=0; i<t->pivotable_number; i++)
 			if (-max_int * t->pivotable_ratios[i] * temp_head[t->pivotable_columns[i]] > 0) {
-				//printf("pivot %i is improvement\n",i);
+				#if DEBUG==1
+					printf("pivot %i is improvement\n",i);
+				#endif
 				new_mask.set(t->table_pivot_column_mask);
 				new_mask.flip_bit(t->pivotable_columns[i]);
 				if (t->pivotable_rows[i] != -1)
 					new_mask.flip_bit(t->table_pivot_columns[t->pivotable_rows[i]]);
-				//new_mask.print();
+				#if DEBUG==1
+					new_mask.print();
+				#endif
 				if (plus_masks->search(&new_mask)==false) {
 					Table* tt = (Table*)malloc(sizeof(Table));
 					tt->initialise(t->w,t->h);
 					tt->pivot(t,i);
-					tt->apply_to_head(temp_head,temp_head2);
+					tt->apply_to_head(head,temp_head2);
 
-					/*printf("temporarily pivoted to:\n");
-					printhead(temp_head2,tt->w);
-					tt->print();*/
+					#if DEBUG==1
+						printf("temporarily pivoted to:\n");
+						printhead(temp_head2,tt->w);
+						tt->print();
+					#endif
 					if (tt->check_subset_improvable(coalition_mask, temp_head2, !maximising) == false) {
-						//printf("pivot %i is verified improvement\n",i);
+						#if DEBUG==1
+							printf("pivot %i is verified improvement\n",i);
+						#endif
 						table_refs->free_all();
 						t->free_data();
 						free(t);
 						neutral_masks->clear();
 						neutral_masks->add(&new_mask);
-						tt->apply_to_head(temp_head,temp_head);
-						tt->set(tt->w-1,tt->h-1,0);
+						tt->apply_to_head(head,temp_head);
+						for (int k=0;k<(tt->h);k++) {
+							if (tt->table_pivot_columns[k]==(tt->w)-2) {
+								tt->set(tt->w-1,k,0);
+								break;
+							}
+						}
 						tt->calculate_pivots();
 						t = tt;
 						refresh = true;
 
-						/*printf("Stepping to table:\n");
-						printhead(temp_head,t->w);
-						t->print();
-						t->print_pivot_info();
-						t->print_pivotable_info();
-						neutral_masks->print_all();
-						plus_masks->print_all();*/
+						#if DEBUG==1
+							printf("Stepping to table:\n");
+							printhead(temp_head,t->w);
+							t->print();
+							t->print_pivot_info();
+							t->print_pivotable_info();
+							neutral_masks->print_all();
+							plus_masks->print_all();
+						#endif
 						break;
 					} else {
-						//printf("pivot %i not verified\n",i);
+						#if DEBUG==1
+							printf("pivot %i not verified\n",i);
+						#endif
 						tt->free_data();
 						free(tt);
 						plus_masks->add(&new_mask);
 					}
 				}
-			}// else
-			//	printf("pivot %i is fail improvement\n",i);
+			}
+			#if DEBUG==1
+			else
+				printf("pivot %i is fail improvement\n",i);
+			#endif
 		if (refresh==false) {
 			for (int i=0; i<t->pivotable_number; i++) {
-				//printf("checking %i\n",i);
+				#if DEBUG==1
+					printf("checking %i\n",i);
+				#endif
 				if (t->pivotable_ratios[i] * temp_head[t->pivotable_columns[i]]==0) {
-					//printf("pivot %i is not improvement\n",i);
+					#if DEBUG==1
+						printf("pivot %i is not improvement\n",i);
+					#endif
 					new_mask.set(t->table_pivot_column_mask);
 					new_mask.flip_bit(t->pivotable_columns[i]);
 					if (t->pivotable_rows[i] != -1)
 						new_mask.flip_bit(t->table_pivot_columns[t->pivotable_rows[i]]);
-					//new_mask.print();
+					#if DEBUG==1
+						new_mask.print();
+					#endif
 					if (neutral_masks->search(&new_mask)==false) {
-						//printf("adding table\n");
+						#if DEBUG==1
+							printf("adding table\n");
+						#endif
 						neutral_masks->add(&new_mask);
 						Table* tt = (Table*)malloc(sizeof(Table));
 						tt->initialise(t->w,t->h);
 						tt->pivot(t,i);
-						//tt->print();
+						#if DEBUG==1
+							tt->print();
+						#endif
 						table_refs->add(tt);
 					}
 				}
 			}
 			if (table_refs->length==0) {
-				//printf("end of run\n");
+				#if DEBUG==1
+					printf("end of run\n");
+				#endif
 				break;
 			}
 			t->free_data();
@@ -230,11 +263,13 @@ double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximisi
 			table_refs->length -= 1;
 			t->apply_to_head(temp_head,temp_head);
 			
-			/*printf("Raising table:\n");
-			printhead(temp_head,t->w);
-			t->print();
-			t->print_pivot_info();
-			t->print_pivotable_info();*/
+			#if DEBUG==1
+				printf("Raising table:\n");
+				printhead(temp_head,t->w);
+				t->print();
+				t->print_pivot_info();
+				t->print_pivotable_info();
+			#endif
 		}
 	}
 	table_refs->destroy();
@@ -257,38 +292,48 @@ double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximisi
 struct WalkBackLinked : ValueLinked {
 	Table* t;
 	int pivot_index;
-	double* head;
 };
 
-double walk_back(Table* t, Mask* coalition, double* head, bool maximising) {
+double walk_back(Table* t, Mask* coalition, double* original_head, bool maximising) {
 	#if DEBUG==1
 		printf("WALKBACK: coalition: ");
 		coalition->print();
-		printhead(head, t->w);
+		printhead(original_head, t->w);
 		t->table_pivot_column_mask->print();
 		t->print();
 		int walkbacks = 0;
 	#endif
+	int max_int = maximising==true ? 1 : -1;
+	int w = t->w;
+
+	WalkBackLinked* link;
+	Mask_Memory* masks;
+	SortedList* pivot_list;
+	Table_Memory* table_refs;
+	double* head;
 	
-	Mask_Memory* masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
+	masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
 	masks->setup(MEMORY_INITIAL_SIZE);
-	SortedList* pivot_list = pivot_list = (SortedList*)calloc(sizeof(SortedList),1);
+	pivot_list = (SortedList*)calloc(sizeof(SortedList),1);
 	pivot_list->setup();
-	Reference_Memory* refs = (Reference_Memory*)calloc(sizeof(Reference_Memory),1);
-	refs->setup(MEMORY_INITIAL_SIZE);
-	Table_Memory* table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
+	table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
 	table_refs->setup(MEMORY_INITIAL_SIZE);
+	head = (double*)malloc(sizeof(double)*(w));
+	memcpy (head, original_head, sizeof(double)*w );
 
 	t->simplex(head, maximising);
-	int max_int = maximising==true ? 1 : -1;
 	t->calculate_pivots();
-	t->apply_to_head(head,head);
-	int w = t->w;
-	WalkBackLinked* link;
-	masks->add(t->table_pivot_column_mask);
+	t->apply_to_head(original_head,head);
 	
+	#if DEBUG==1
+		printf("WALKBACK: simplexed result: \n");
+		printhead(head, t->w);
+		t->print();
+	#endif
+
+	masks->add(t->table_pivot_column_mask);
 	Mask* new_mask = (Mask*)malloc(sizeof(Mask));
-	while (t->check_subset_improvable(coalition, head, !maximising)) {
+	while (t->check_subset_improvable(coalition, head, !maximising)==true) {
 		#if DEBUG==1
 			printf("ITERATING %i\n",walkbacks);
 			walkbacks++;
@@ -301,7 +346,6 @@ double walk_back(Table* t, Mask* coalition, double* head, bool maximising) {
 			if (masks->search(new_mask)==false) {
 				link = (WalkBackLinked*)malloc(sizeof(WalkBackLinked));
 				link->t = t;
-				link->head = head;
 				link->pivot_index = i;
 				link->v = max_int*(head[w-1] - t->pivotable_ratios[i]*head[t->pivotable_columns[i]]);
 				pivot_list->add(link);
@@ -322,14 +366,12 @@ double walk_back(Table* t, Mask* coalition, double* head, bool maximising) {
 		#endif
 		
 		link = (WalkBackLinked*)(pivot_list->pop());
-		head = (double*)malloc(sizeof(double)*(w));
-		refs->add(head);
 		t = (Table*)malloc(sizeof(Table));
 		t->initialise(w,link->t->h);
 		table_refs->add(t);
 		t->pivot(link->t,link->pivot_index);
 		t->calculate_pivots();
-		t->apply_to_head(link->head,head);
+		t->apply_to_head(original_head,head);
 		free(link);
 		
 		#if DEBUG==1
@@ -349,24 +391,19 @@ double walk_back(Table* t, Mask* coalition, double* head, bool maximising) {
 	table_refs->free_all();
 	table_refs->destroy();
 	free(table_refs);
-	refs->free_all();
-	refs->destroy();
-	free(refs);
 	pivot_list->destroy();
 	free(pivot_list);
 	masks->clear();
 	masks->destroy();
 	free(masks);
 	
+	free(head);
 	free(new_mask);
 	#if DEBUG==1
 		printf("RETURNING: %f\n", ret);
 	#endif
 	return ret;
 }
-
-
-
 
 
 

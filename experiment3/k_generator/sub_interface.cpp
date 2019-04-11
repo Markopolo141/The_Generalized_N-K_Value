@@ -39,7 +39,7 @@ Table* analyse_pyobject_tables(
 	int le_h = (int)PyList_Size(le_array); // get heights
 	int eq_h = (int)PyList_Size(eq_array);
 	int ge_h = (int)PyList_Size(ge_array);
-	int h = le_h+eq_h+ge_h+1;
+	int h = le_h+eq_h+ge_h;
 	*artificial_variables = ge_h+eq_h;
 
 	int le_w = get_py_object_width(le_array); // get width and check all tables have same width
@@ -91,7 +91,6 @@ Table* analyse_pyobject_tables(
 		(*slackness_columns)[r]=w+r-1;
 		r++;
 	}
-
 	for (int j=0; j<eq_h; j++) {
 		row = PyList_GetItem(eq_array, j);
 		for (int i=0; i<w-1; i++) {
@@ -128,8 +127,32 @@ Table* analyse_pyobject_tables(
 		(*slackness_columns)[r]=w+r-eq_h-1;
 		r++;
 	}
-	t->table_pivot_columns[h-1]=-1;
 	t->table_pivot_column_number = h;
 	return t;
 }
+
+
+Table* analyse_pyobject_table(PyObject *array) {
+	int h = (int)PyList_Size(array); // get heights
+	int w = get_py_object_width(array); // get width and check all tables have same width
+	if (w<1) {
+		PyErr_Format(PyExc_TypeError, "Argument to %s must be 2D arrays that have same consistent width", __FUNCTION__);
+		return NULL;
+	}
+	Table* t; // construct the table to appropriate size
+	t = (Table*)malloc(sizeof(Table));
+	t->initialise_and_wipe(w, h);
+	
+	PyObject *row;
+	double v;
+	for (int j=0; j<h; j++) {
+		row = PyList_GetItem(array, j);
+		for (int i=0; i<w; i++) {
+			v = PyFloat_AsDouble(PyList_GetItem(row,i));
+			t->set(i,j,v);
+		}
+	}
+	return t;
+}
+
 

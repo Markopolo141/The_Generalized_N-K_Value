@@ -31,7 +31,16 @@ int max_3(int a, int b, int c){
 		}
 	}
 }
-
+inline int count_the_bits(unsigned long A) {
+	unsigned long B;
+	B = A;
+	int i=0;
+	while (B!=0) {
+		i += B&1;
+		B >>= 1;
+	}
+	return i;
+}
 
 #define DOUBLE 1
 #define TRIPPLE 0
@@ -80,6 +89,17 @@ class Mask {
 			m2.B = (this->B)&(m.B);
 			#if TRIPPLE==1
 				m2.C = (this->C)&(m.C);
+			#endif
+		#endif
+		return m2;
+	}
+	inline Mask operator~() {
+		Mask m2;
+		m2.A = ~(this->A);
+		#if DOUBLE==1
+			m2.B = ~(this->B);
+			#if TRIPPLE==1
+				m2.C = ~(this->C);
 			#endif
 		#endif
 		return m2;
@@ -146,19 +166,28 @@ class Mask {
 		#if DOUBLE==1
 		#if TRIPPLE==1
 		if (bit>=sizeof(unsigned long)*8*2) {
-			C ^= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*2);
+			this->C ^= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*2);
 		} else 
 		#endif
 		if (bit>=sizeof(unsigned long)*8) {
-			B ^= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8);
+			this->B ^= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8);
 		} else {
 		#endif
-			A ^= ((unsigned long)1)<<(bit);
+			this->A ^= ((unsigned long)1)<<(bit);
 		#if DOUBLE==1
 		}
 		#endif
 	}
-	
+	int count_bits() {
+		int a = count_the_bits(this->A);
+		#if DOUBLE==1
+		#if TRIPPLE==1
+		a += count_the_bits(this->C);
+		#endif
+		a += count_the_bits(this->B);
+		#endif
+		return a;
+	}
 	inline unsigned int get_bit(unsigned int bit) {
 		#if DOUBLE==1
 		#if TRIPPLE==1

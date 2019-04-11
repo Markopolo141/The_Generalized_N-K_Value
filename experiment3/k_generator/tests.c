@@ -560,6 +560,72 @@ void test15() {
 	free(head);
 }
 
+void test16() {
+	printf("TEST16\n");
+	double* head = (double*)calloc(sizeof(double),8);
+	Table* t = (Table*)malloc(sizeof(Table));
+	t->initialise_and_wipe(8, 3);
+	head[0] = 10;	head[1] = -57;	head[2] = -9;	head[3] = -24;
+	t->set(0,0,0.5);	t->set(1,0,-5.5);	t->set(2,0,-2.5);	t->set(3,0,9.0);	t->set(4,0,1.0);	t->set(5,0,0.0);	t->set(6,0,0.0);	t->set(7,0,0.0);
+	t->set(0,1,0.5);	t->set(1,1,-1.5);	t->set(2,1,-0.5);	t->set(3,1,1.0);	t->set(4,1,0.0);	t->set(5,1,1.0);	t->set(6,1,0.0);	t->set(7,1,0.0);
+	t->set(0,2,1.0);	t->set(1,2,0.0);	t->set(2,2,0.0);	t->set(3,2,0.0);	t->set(4,2,0.0);	t->set(5,2,0.0);	t->set(6,2,1.0);	t->set(7,2,1.0);
+
+	Mask mask;
+	mask.set_zero();
+	mask.print();
+
+	printhead(head,8);
+	t->print();
+	printf("subset_improvable: %i\n",t->check_subset_improvable(&mask, head, false)==true);
+	printhead(head,8);
+	t->print();
+	
+	printf("SIMPLEXING\n");
+	t->simplex(head,false);
+	printhead(head,8);
+	t->print();
+	printf("subset_improvable: %i\n",t->check_subset_improvable(&mask, head, false)==true);
+
+	t->free_data();
+	free(t);
+	free(head);
+}
+
+void test17() {
+	printf("TEST17\n");
+	double* head = (double*)calloc(sizeof(double),8);
+	Table* t = (Table*)malloc(sizeof(Table));
+	t->initialise_and_wipe(8, 4);
+	head[0] = -1.5;	head[1] = 0.1;	head[2] = -1.9;	head[3] = 2.1;
+	t->set(0,0,1.0);	t->set(1,0,0.0);	t->set(2,0,0.0);	t->set(3,0,0.0);	t->set(4,0,1.0);	t->set(5,0,0.0);	t->set(6,0,-1.0);	t->set(7,0,0.0);
+	t->set(0,1,-0.5);	t->set(1,1,1.0);	t->set(2,1,0.0);	t->set(3,1,0.0);	t->set(4,1,0.0);	t->set(5,1,0.5);	t->set(6,1,-0.5);	t->set(7,1,0.0);
+	t->set(0,2,0.0);	t->set(1,2,0.0);	t->set(2,2,1.0);	t->set(3,2,0.0);	t->set(4,2,0.0);	t->set(5,2,0.0);	t->set(6,2,1.0);	t->set(7,2,1.0);
+	t->set(0,3,0.5);	t->set(1,3,0.0);	t->set(2,3,0.0);	t->set(3,3,1.0);	t->set(4,3,0.0);	t->set(5,3,0.5);	t->set(6,3,0.5);	t->set(7,3,1.0);
+	t->reverse_engineer_pivots();
+
+	Mask mask;
+	mask.set_zero();
+	mask.set_bit(2,1);
+	mask.set_bit(3,1);
+	mask.print();
+
+	printhead(head,8);
+	t->print();
+	
+	printf("should be 1.7\n");
+	printf("bilevel solving: %f\n",bilevel_solve(t, &mask, head, true));
+	printf("walkback solving: %f\n",walk_back(t, &mask, head, true));
+
+	printf("flipping\n");
+	
+	printf("should be -1.1\n");
+	printf("bilevel solving: %f\n",bilevel_solve(t, &mask, head, false));
+	printf("walkback solving: %f\n",walk_back(t, &mask, head, false));
+
+	t->free_data();
+	free(t);
+	free(head);
+}
 
 int main() {
 	//test1();
@@ -575,8 +641,10 @@ int main() {
 	//test11();
 	//test12();
 	//test13();
-	test14();
-	test15();
+	//test14();
+	//test15();
+	//test16();
+	test17();
 	printf("hello\n");
 	return 0;
 }
