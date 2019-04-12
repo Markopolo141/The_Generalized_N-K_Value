@@ -270,13 +270,13 @@ void Table::calculate_pivots() {
 					best_ratio = ratio;
 			}
 			// the following block allows -1,0 pivoting... *carefull*
-			else if ((v<0) && (right_value==0)) {
+			/*else if ((v<0) && (right_value==0)) {
 				this->pivotable_columns[this->pivotable_number] = i;
 				this->pivotable_rows[this->pivotable_number] = j;
 				this->pivotable_ratios[this->pivotable_number]=0.0;
 				this->pivotable_columns_mask->set_bit(i,1);
 				this->pivotable_number += 1;
-			}
+			}*/
 		}
 		for (unsigned char z=0; z<row_memory->length; z++) {// if there is a best row add the info to the datastructure
 			Row_iter* r = &(row_memory->memory[z]);

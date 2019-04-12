@@ -93,6 +93,43 @@ void equation_pruning(Table* t, int* slackness_columns) {
 }
 
 
+/*double super_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximising) {
+	double* temp_head = (double*)malloc(sizeof(double)*t->w);
+	Table_Memory* table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
+	Mask_Memory* plus_masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
+	Mask_Memory* minus_masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
+	Table* new_t = (Table*)calloc(sizeof(Table),1);
+
+
+	table_refs->setup(MEMORY_INITIAL_SIZE);
+	plus_masks->setup(MEMORY_INITIAL_SIZE);
+	minus_masks->setup(MEMORY_INITIAL_SIZE);
+	new_t->initialise_and_load(t);
+	t->apply_to_head(head,temp_head);
+	new_t->simplex(temp_head, !maximising);
+	minus_masks->add(t->table_pivot_column_mask);
+	table_refs->add(t);
+	
+	while (table_refs->length > 0) {
+		t = table_refs->memory(table_refs->length-1);
+		table_refs->length -= 1;
+		
+		for (int i=0; i<t->pivotable_number; i++)
+			if (-max_int * t->pivotable_ratios[i] * temp_head[t->pivotable_columns[i]] > 0) {
+
+			}
+		
+		
+		
+		t->clear_data();
+		free(t);
+	}
+	
+	t=new_t;
+	Mask new_mask;
+	
+}*/
+
 double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximising) {
 	#if DEBUG==1
 		printf("BILEVEL SOLVE: coalition: ");
