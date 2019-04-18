@@ -3,7 +3,7 @@
 #define TINY 0.00001
 #define MEMORY_INITIAL_SIZE 131072
 
-#define DEBUG 0
+#define DEBUG 1
 #define PRUNING 1
 
 #include <utils.cpp>
@@ -126,8 +126,8 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	if (((~player_mask)&coalition).non_zero())
 		return python_error("coalition too big!");
 	anticoalition.set(player_mask^coalition);
-	int coalition_bits = coalition.count_bits();
-	int anticoalition_bits = anticoalition.count_bits();
+	//int coalition_bits = coalition.count_bits();
+	//int anticoalition_bits = anticoalition.count_bits();
 	
 	#if DEBUG==1
 		printf("coalition: \t");
@@ -150,21 +150,17 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	#if DEBUG==1
 		printf("about to compute on coalition\n");
 	#endif
-	//if (coalition_bits > players*2.0/3) {
-	//	r += 0.5*walk_back(prev_min_table, &coalition, temporary_head, true);
-	//} else {
-		r += 0.5*bilevel_solve(prev_min_table, &coalition, temporary_head, true);
-	//}
+	//r += 0.5*walk_back(prev_min_table, &coalition, temporary_head, true);
+	//r += 0.5*bilevel_solve(prev_min_table, &coalition, temporary_head, true);
+	r += 0.5*super_bilevel_solve(prev_min_table, &coalition, temporary_head, true);
 	for (int i=0; i< t->w; i++)
 		temporary_head[i] = -(2*((int)(coalition.get_bit(i)))-1)*master_head[i];
 	#if DEBUG==1
 		printf("about to compute on anticoalition\n");
 	#endif
-	//if (anticoalition_bits > players*2.0/3) {
-	//	r += 0.5*walk_back(prev_max_table, &anticoalition, temporary_head, false);
-	//} else {
-		r += 0.5*bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
-	//}
+	//r += 0.5*walk_back(prev_max_table, &anticoalition, temporary_head, false);
+	//r += 0.5*bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
+	//r += 0.5*super_bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
 	
 	return PyFloat_FromDouble(r);
 }

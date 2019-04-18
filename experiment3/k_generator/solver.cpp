@@ -93,42 +93,182 @@ void equation_pruning(Table* t, int* slackness_columns) {
 }
 
 
-/*double super_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximising) {
+double super_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximising) {
+	#if DEBUG==1
+		printf("SUPER BILEVEL SOLVE: coalition: ");
+		coalition_mask->print();
+		printhead(head, t->w);
+		t->table_pivot_column_mask->print();
+		t->print();
+	#endif
+	int max_int = maximising==true ? 1 : -1;
 	double* temp_head = (double*)malloc(sizeof(double)*t->w);
-	Table_Memory* table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
+	t->apply_to_head(head,temp_head);
+	Table* new_t = (Table*)calloc(sizeof(Table),1);
+	new_t->initialise_and_load(t);
+	new_t->calculate_pivots();
+	
+	Table_Memory* plus_table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
+	Table_Memory* minus_table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
 	Mask_Memory* plus_masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
 	Mask_Memory* minus_masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
-	Table* new_t = (Table*)calloc(sizeof(Table),1);
 
-
-	table_refs->setup(MEMORY_INITIAL_SIZE);
+	plus_table_refs->setup(MEMORY_INITIAL_SIZE);
+	minus_table_refs->setup(MEMORY_INITIAL_SIZE);
 	plus_masks->setup(MEMORY_INITIAL_SIZE);
 	minus_masks->setup(MEMORY_INITIAL_SIZE);
-	new_t->initialise_and_load(t);
-	t->apply_to_head(head,temp_head);
-	new_t->simplex(temp_head, !maximising);
-	minus_masks->add(t->table_pivot_column_mask);
-	table_refs->add(t);
-	
-	while (table_refs->length > 0) {
-		t = table_refs->memory(table_refs->length-1);
-		table_refs->length -= 1;
-		
-		for (int i=0; i<t->pivotable_number; i++)
-			if (-max_int * t->pivotable_ratios[i] * temp_head[t->pivotable_columns[i]] > 0) {
 
-			}
-		
-		
-		
-		t->clear_data();
-		free(t);
+	bool improvable = new_t->check_subset_improvable(coalition_mask, temp_head, !maximising);
+	while (improvable==false) {
+		double best_improvement;
+		int best_improvement_index;
+		if (new_t->simplex_improve(temp_head, max_int, minus_masks, &best_improvement, &best_improvement_index) == false)
+			break;
+		new_t->pivot(new_t, best_improvement_index);
+		new_t->calculate_pivots();
+		new_t->apply_to_head(temp_head,temp_head);
+		improvable = new_t->check_subset_improvable(coalition_mask, temp_head, !maximising);
 	}
-	
-	t=new_t;
+	minus_masks->clear();
+	while (improvable==true) {
+		double best_improvement;
+		int best_improvement_index;
+		if (new_t->simplex_improve(temp_head, -max_int, plus_masks, &best_improvement, &best_improvement_index) == false)
+			break;
+		new_t->pivot(new_t, best_improvement_index);
+		new_t->calculate_pivots();
+		new_t->apply_to_head(temp_head,temp_head);
+		improvable = new_t->check_subset_improvable(coalition_mask, temp_head, !maximising);
+	}
+	plus_masks->clear();
+
+	minus_table_refs->add(new_t);
 	Mask new_mask;
-	
-}*/
+	double extreme_value = temp_head[new_t->w-1];
+	#if DEBUG==1
+		printf("EQUALIZED TABLE: ");
+		new_t->table_pivot_column_mask->print();
+		printhead(temp_head, t->w);
+		new_t->print();
+		printf("table id: %li\n",(long)new_t);
+		printf("extreme value: %f\n",extreme_value);
+	#endif
+	new_t = (Table*)calloc(sizeof(Table),1);
+	new_t->initialise(t->w,t->h);
+	while (true) {
+		//printf("ZOOS: %i\n",new_t->h);
+		if (minus_table_refs->length>0) {
+			#if DEBUG==1
+				printf("SOURCING TABLE MINUS\n");
+			#endif
+			t = minus_table_refs->memory[minus_table_refs->length-1];
+			minus_table_refs->length -= 1;
+			t->apply_to_head(head,temp_head);
+			#if DEBUG==1
+				printf("loading table id: %li\n",(long)t);
+			#endif
+			if (max_int*temp_head[t->w-1] > max_int*extreme_value) {
+				extreme_value = temp_head[t->w-1];
+				#if DEBUG==1
+					printf("extreme value set to: %f\n",extreme_value);
+				#endif
+			}
+			for (int i=0; i<t->pivotable_number; i++) {
+				new_mask.set(t->table_pivot_column_mask);
+				new_mask.flip_bit(t->pivotable_columns[i]);
+				if (t->pivotable_rows[i] != -1)
+					new_mask.flip_bit(t->table_pivot_columns[t->pivotable_rows[i]]);
+				#if DEBUG==1
+					printf("pivot mask check: ");
+					new_mask.print();
+				#endif
+				if ((plus_masks->search(&new_mask)==false) && (minus_masks->search(&new_mask)==false)) {
+					new_t->pivot(t,i);
+					new_t->apply_to_head(head,temp_head);
+					#if DEBUG==1
+						printf("pivot improvability check\n");
+						printhead(temp_head, t->w);
+						new_t->print();
+					#endif
+					if (new_t->check_subset_improvable(coalition_mask, temp_head, !maximising) == true) {
+						#if DEBUG==1
+							printf("NEW PLUS TABLE: \n");
+							printhead(temp_head, t->w);
+							new_t->print();
+							printf("table id: %li\n",(long)new_t);
+							new_t->print_pivot_info();
+						#endif
+						new_t->calculate_pivots();
+						plus_table_refs->add(new_t);
+						new_t = (Table*)calloc(sizeof(Table),1);
+						new_t->initialise(t->w,t->h);
+					}
+				}
+			}
+			minus_masks->add(t->table_pivot_column_mask);
+			t->free_data();
+			free(t);
+		} else if (plus_table_refs->length>0) {
+			#if DEBUG==1
+				printf("SOURCING TABLE PLUS\n");
+			#endif
+			t = plus_table_refs->memory[plus_table_refs->length-1];
+			plus_table_refs->length -= 1;
+			#if DEBUG==1
+				printf("loading table id: %li\n",(long)t);
+			#endif
+			for (int i=0; i<t->pivotable_number; i++) {
+				new_mask.set(t->table_pivot_column_mask);
+				new_mask.flip_bit(t->pivotable_columns[i]);
+				if (t->pivotable_rows[i] != -1)
+					new_mask.flip_bit(t->table_pivot_columns[t->pivotable_rows[i]]);
+				#if DEBUG==1
+					printf("pivot mask check: ");
+					new_mask.print();
+				#endif
+				if ((plus_masks->search(&new_mask)==false) && (minus_masks->search(&new_mask)==false)) {
+					new_t->pivot(t,i);
+					new_t->apply_to_head(head,temp_head);
+					#if DEBUG==1
+						printf("pivot improvability check\n");
+						printhead(temp_head, t->w);
+						new_t->print();
+					#endif
+					if (new_t->check_subset_improvable(coalition_mask, temp_head, !maximising) == false) {
+						#if DEBUG==1
+							printf("NEW MINUS TABLE: \n");
+							printhead(temp_head, t->w);
+							new_t->print();
+							printf("table id: %li\n",(long)new_t);
+							new_t->print_pivot_info();
+						#endif
+						minus_table_refs->add(new_t);
+						new_t->calculate_pivots();
+						new_t = (Table*)calloc(sizeof(Table),1);
+						new_t->initialise(t->w,t->h);
+					}
+				}
+			}
+			plus_masks->add(t->table_pivot_column_mask);
+			t->free_data();
+			free(t);
+		} else {
+			break;
+		}
+	}
+	new_t->free_data();
+	free(new_t);
+	free(temp_head);
+	plus_table_refs->destroy();
+	minus_table_refs->destroy();
+	plus_masks->destroy();
+	minus_masks->destroy();
+	free(plus_table_refs);
+	free(minus_table_refs);
+	free(plus_masks);
+	free(minus_masks);
+	return extreme_value;
+}
 
 double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximising) {
 	#if DEBUG==1
@@ -241,6 +381,8 @@ double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximisi
 							neutral_masks->print_all();
 							plus_masks->print_all();
 						#endif
+						//printf("S ");
+						//t->table_pivot_column_mask->print();
 						break;
 					} else {
 						#if DEBUG==1
@@ -307,6 +449,8 @@ double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximisi
 				t->print_pivot_info();
 				t->print_pivotable_info();
 			#endif
+			//printf("r ");
+			//t->table_pivot_column_mask->print();
 		}
 	}
 	table_refs->destroy();

@@ -31,6 +31,7 @@ struct Table {
 	void apply_to_head(double* head, double* new_head); // for a given head, apply the pivot rows to the head to make it consistent with the table
 	void calculate_pivots(); // scan through the table and select all the viable pivot points
 	void pivot(Table* t, int pivotable_index); // given table t (which can be -this-) with its pivotable index, mutate this table to be the pivoted result
+	void pivot(Table* t, int column, int row); // given table t (which can be -this-) mutate this table to be pivoted by the row,column pivot point.
 	int shallow_check_subset_improvable(Mask* anti_subset_mask, double* head, bool maximising); // scan through this table and detect whether the coalition identified by the anti-subset-mask can improve on a one pass
 	bool check_subset_improvable(Mask* anti_subset_mask, double* head, bool maximising); // do a comprehensive check whether the coalition identified by the anti-subset-mask can improve.
 	double simplex(double* head, bool maximising); // conduct a full simplex to the table.
@@ -298,8 +299,10 @@ void Table::calculate_pivots() {
 void Table::pivot(Table* t, int pivotable_index) {
 	if (t->need_to_recalculate_pivotable==true)
 		printf("WARNING: pivoting from outdated table pivot info\n");
-	int row = t->pivotable_rows[pivotable_index];
-	int column = t->pivotable_columns[pivotable_index];
+	this->pivot(t,t->pivotable_columns[pivotable_index],t->pivotable_rows[pivotable_index]);
+}
+
+void Table::pivot(Table* t, int column, int row) {
 	double* pivot_row = &(t->data)[row*this->w];
 	double center = pivot_row[column];
 	if (t==this) {

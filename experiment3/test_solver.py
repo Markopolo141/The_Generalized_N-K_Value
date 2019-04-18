@@ -24,12 +24,12 @@ def worker(number,data,ppc):
 	seed(32000)
 	m = 100
 	setup(ppc)
-	#print v([0,1,2])
-	#sys.exit(0)
+	print v([0,3,5,1])
+	sys.exit(0)
 	listi = list(range(N))
 	shuffle(listi)
 	#spruik_solver()
-	for ii in range(5):
+	for ii in range(1):
 		#print "hello"
 		output = [0.0]
 		for i in range(1,N+1):#N+1):
