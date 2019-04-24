@@ -67,6 +67,14 @@ class Mask {
 		printf("\n");
 	}
 
+	void print_small() {
+		long a = this->A;
+		while (a!=0) {
+			printf("%i",a&1);
+			a >>= 1;
+		}
+	}
+
 	inline bool operator==(const Mask& m) {
 		#if DOUBLE==1
 			#if TRIPPLE==1

@@ -93,7 +93,7 @@ void equation_pruning(Table* t, int* slackness_columns) {
 }
 
 
-double super_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximising) {
+/*double super_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximising) {
 	#if DEBUG==1
 		printf("SUPER BILEVEL SOLVE: coalition: ");
 		coalition_mask->print();
@@ -268,7 +268,7 @@ double super_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool ma
 	free(plus_masks);
 	free(minus_masks);
 	return extreme_value;
-}
+}*/
 
 double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximising) {
 	#if DEBUG==1

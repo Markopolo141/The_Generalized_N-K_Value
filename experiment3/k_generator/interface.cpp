@@ -3,7 +3,7 @@
 #define TINY 0.00001
 #define MEMORY_INITIAL_SIZE 131072
 
-#define DEBUG 1
+#define DEBUG 0
 #define PRUNING 1
 
 #include <utils.cpp>
@@ -151,16 +151,14 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printf("about to compute on coalition\n");
 	#endif
 	//r += 0.5*walk_back(prev_min_table, &coalition, temporary_head, true);
-	//r += 0.5*bilevel_solve(prev_min_table, &coalition, temporary_head, true);
-	r += 0.5*super_bilevel_solve(prev_min_table, &coalition, temporary_head, true);
+	r += 0.5*bilevel_solve(prev_min_table, &coalition, temporary_head, true);
 	for (int i=0; i< t->w; i++)
 		temporary_head[i] = -(2*((int)(coalition.get_bit(i)))-1)*master_head[i];
 	#if DEBUG==1
 		printf("about to compute on anticoalition\n");
 	#endif
 	//r += 0.5*walk_back(prev_max_table, &anticoalition, temporary_head, false);
-	//r += 0.5*bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
-	//r += 0.5*super_bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
+	r += 0.5*bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
 	
 	return PyFloat_FromDouble(r);
 }
@@ -255,6 +253,119 @@ static PyObject* all_pivots(PyObject* self, PyObject* args) {
 	return PyFloat_FromDouble(1);
 }
 
+
+
+static PyObject* all_pivots_dot(PyObject* self, PyObject* args) {
+	free_memory();
+
+	PyObject *array;
+	PyObject *number;
+	PyObject *input_head;
+	Mask coalition;
+	coalition.set_zero();
+	
+	Py_ssize_t TupleSize = PyTuple_Size(args);
+	if(TupleSize != 3)
+		return python_error("You must supply one argument.");
+	array = PyTuple_GetItem(args,0);
+	input_head = PyTuple_GetItem(args,1);
+	number = PyTuple_GetItem(args,2);
+	if (PyNumber_Check(number) != 1)
+		return python_error("Non-numeric argument.");
+	coalition.A = PyLong_AsUnsignedLong(PyNumber_Long(number));
+	if (PyErr_Occurred()!= NULL)
+		return python_error("Error occured..");
+	
+	Table* t;
+	t = analyse_pyobject_table(array);
+	t->reverse_engineer_pivots();
+	t->calculate_pivots();
+	
+	setup_memory(t);
+	if (set_head(input_head, t->w)==-1)
+		return python_error("bad head.");
+
+	for (int i=0; i< t->w; i++)
+		master_head[i] = -(2*((int)(coalition.get_bit(i)))-1)*master_head[i];
+	
+	Mask_Memory* masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
+	masks->setup(MEMORY_INITIAL_SIZE);
+	Table_Memory* table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
+	table_refs->setup(MEMORY_INITIAL_SIZE);
+	Mask* new_mask = (Mask*)malloc(sizeof(Mask));
+	
+	masks->add(t->table_pivot_column_mask);
+	table_refs->add(t);
+
+	//coalition.print();
+
+	printf("graph graphname {\n\t");
+	t->table_pivot_column_mask->print_small();
+	printf(" [");
+	t->apply_to_head(master_head,temporary_head);
+	printf("label=\"");
+	t->table_pivot_column_mask->print_small();
+	printf(",%.1f\",",temporary_head[t->w-1]);
+	if (t->check_subset_improvable(&coalition, temporary_head, false))
+		printf("color=blue");
+	printf("];\n");
+
+	while(table_refs->length != 0) {
+		t = table_refs->memory[table_refs->length-1];
+		table_refs->length -= 1;
+		/*printf("switch to: ");
+		t->table_pivot_column_mask->print();
+		printf("\n");*/
+		for (int i=0; i<t->pivotable_number; i++) {
+			new_mask->set(t->table_pivot_column_mask);
+			new_mask->flip_bit(t->pivotable_columns[i]);
+			if (t->pivotable_rows[i] != -1)
+				new_mask->flip_bit(t->table_pivot_columns[t->pivotable_rows[i]]);
+			if (masks->search(new_mask)==false) {
+				masks->add(new_mask);
+				Table* tt = (Table*)malloc(sizeof(Table));
+				tt->initialise(t->w,t->h);
+				tt->pivot(t,i);
+				tt->calculate_pivots();
+				table_refs->add(tt);
+				
+				printf("\t");
+				tt->table_pivot_column_mask->print_small();
+				printf(" [");
+				tt->apply_to_head(master_head,temporary_head);
+				printf("label=\"");
+				tt->table_pivot_column_mask->print_small();
+				printf(",%.1f\",",temporary_head[tt->w-1]);
+				if (tt->check_subset_improvable(&coalition, temporary_head, false))
+					printf("color=blue");
+				printf("];\n");
+			}
+			if (t->table_pivot_column_mask->A > new_mask->A) {
+				printf("\t");
+				t->table_pivot_column_mask->print_small();
+				printf(" -- ");
+				new_mask->print_small();
+				printf(";\n");
+			}
+		}
+		t->free_data();
+		free(t);
+	}
+	printf("}\n");
+	
+	free(new_mask);
+	masks->clear();
+	masks->destroy();
+	free(masks);
+	table_refs->free_all();
+	table_refs->destroy();
+	free(table_refs);
+	return PyFloat_FromDouble(1);
+}
+
+
+
+
 static char setup_solver_docs[] = "setup_solver(): does all the setup for the solver apparatus, conducting Phase I feasibility solving and initialising all memory.\n";
 static char solve_docs[] = "solve(): for a coalition calculate the minimax value.\n";
 static char spruik_docs[] = "asdfas.\n";
@@ -270,6 +381,8 @@ static PyMethodDef bilevel_solver_funcs[] = {
 	{"destroy", (PyCFunction)destroy, 
 		METH_NOARGS, destroy_docs},
 	{"all_pivots", (PyCFunction)all_pivots, 
+		METH_VARARGS, setup_solver_docs},
+	{"all_pivots_dot", (PyCFunction)all_pivots_dot, 
 		METH_VARARGS, setup_solver_docs},
 		{NULL}
 };
