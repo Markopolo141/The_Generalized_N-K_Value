@@ -29,14 +29,16 @@ struct Table {
 	void delete_column(int c, double* head);
 	
 	void apply_to_head(double* head, double* new_head); // for a given head, apply the pivot rows to the head to make it consistent with the table
-	void calculate_pivots(); // scan through the table and select all the viable pivot points
+	void calculate_pivots(bool negatives); // scan through the table and select all the viable pivot points
 	void pivot(Table* t, int pivotable_index); // given table t (which can be -this-) with its pivotable index, mutate this table to be the pivoted result
 	void pivot(Table* t, int column, int row); // given table t (which can be -this-) mutate this table to be pivoted by the row,column pivot point.
 	int shallow_check_subset_improvable(Mask* anti_subset_mask, double* head, bool maximising); // scan through this table and detect whether the coalition identified by the anti-subset-mask can improve on a one pass
 	bool check_subset_improvable(Mask* anti_subset_mask, double* head, bool maximising); // do a comprehensive check whether the coalition identified by the anti-subset-mask can improve.
 	double simplex(double* head, bool maximising); // conduct a full simplex to the table.
 	bool simplex_improve(double* head, int max_int, Mask_Memory* masks, double* best_improvement, int* best_improvement_index); // do degenerate pivots until the first nondegenerate simplex step (if possible)
+	void simplex_step(double* head, int max_int, double* best_improvement, int* best_improvement_index); // select the next step in simplex process
 	void reverse_engineer_pivots(); // given a table without pivot information, do best attempt at reconstructing pivot info (insofar as there are pivots in the table)
+	void add_degenerate_pivot_masks(Mask_Memory* masks);
 
 	void print(); // print table itself
 	void print_pivot_info(); // debug info on table pivot columns
@@ -160,6 +162,30 @@ inline void Table::set(int c, int r, double v) {
 	need_to_recalculate_pivotable = true;
 }
 
+void Table::simplex_step(double* head, int max_int, double* best_improvement, int* best_improvement_index) {
+	int smallest_out_column = -1;
+	for (int pivot_index=0; pivot_index < this->pivotable_number; pivot_index++) {
+		double head_value = head[this->pivotable_columns[pivot_index]];
+		if (head_value*max_int < 0) {
+			double ratio = -max_int*head_value*this->pivotable_ratios[pivot_index];
+			if (ratio>*best_improvement) {
+				*best_improvement = ratio;
+				*best_improvement_index = pivot_index;
+			} else if ((ratio==0) && (*best_improvement_index==-1)) { //bland's rule
+				if (smallest_out_column == -1) {
+					smallest_out_column = this->pivotable_columns[pivot_index];
+					*best_improvement_index = pivot_index;
+				} else {
+					if (this->pivotable_columns[pivot_index] < smallest_out_column) {
+						smallest_out_column = this->pivotable_columns[pivot_index];
+						*best_improvement_index = pivot_index;
+					}
+				}
+			}
+		}
+	}
+}
+
 bool Table::simplex_improve(double* head, int max_int, Mask_Memory* masks, double* best_improvement, int* best_improvement_index) {
 	if (this->need_to_recalculate_pivotable==true)
 		printf("WARNING: sub-simplexing on outdated table pivot info\n");
@@ -168,27 +194,7 @@ bool Table::simplex_improve(double* head, int max_int, Mask_Memory* masks, doubl
 	while (true) {
 		*best_improvement=0;
 		*best_improvement_index = -1;
-		//int smallest_out_column = -1;
-		for (int pivot_index=0; pivot_index < this->pivotable_number; pivot_index++) {
-			double head_value = head[this->pivotable_columns[pivot_index]];
-			if (head_value*max_int < 0) {
-				double ratio = -max_int*head_value*this->pivotable_ratios[pivot_index];
-				if (ratio>*best_improvement) {
-					*best_improvement = ratio;
-					*best_improvement_index = pivot_index;
-				} else if ((ratio==0) && (*best_improvement_index==-1)) { //bland's rule
-					//if (smallest_out_column == -1) {
-					//	smallest_out_column = this->pivotable_columns[pivot_index];
-						*best_improvement_index = pivot_index;
-					//} else {
-					//	if (this->pivotable_columns[pivot_index] < smallest_out_column) {
-					//		smallest_out_column = this->pivotable_columns[pivot_index];
-					//		*best_improvement_index = pivot_index;
-					//	}
-					//}
-				}
-			}
-		}
+		this->simplex_step(head, max_int, best_improvement, best_improvement_index);
 		if (*best_improvement_index==-1) // destinct optima attained
 			return false;
 		if (*best_improvement>0) // if positive improvement possible
@@ -196,7 +202,7 @@ bool Table::simplex_improve(double* head, int max_int, Mask_Memory* masks, doubl
 		this->pivot(this, *best_improvement_index);
 		if (masks->search(this->table_pivot_column_mask)==true) // if degenerate cycling is occuring in context of bland's rule
 			return false;
-		this->calculate_pivots();
+		this->calculate_pivots(false);
 		this->apply_to_head(head,head);
 		masks->add(this->table_pivot_column_mask);
 	}
@@ -206,7 +212,7 @@ double Table::simplex(double* head, bool maximising) {
 	//if (this->table_pivot_column_number != this->h)
 	//	printf("WARNING: simplex method on potentially badly formed table.\n");
 	int max_int = maximising==true ? 1 : -1;
-	this->calculate_pivots();
+	this->calculate_pivots(false);
 	this->apply_to_head(head,head);
 	Mask_Memory* masks;
 	masks = (Mask_Memory*)calloc(sizeof(Mask_Memory),1);
@@ -216,7 +222,7 @@ double Table::simplex(double* head, bool maximising) {
 
 	while (this->simplex_improve(head, max_int, masks, &best_improvement, &best_improvement_index)==true) {
 		this->pivot(this, best_improvement_index);
-		this->calculate_pivots();
+		this->calculate_pivots(false);
 		this->apply_to_head(head,head);
 	}
 
@@ -248,7 +254,7 @@ void Table::apply_to_head(double* head, double* new_head) {
 }
 
 // calculate all the potential pivot columns and calculate the ratios by which the pivoting will improve the objective
-void Table::calculate_pivots() {
+void Table::calculate_pivots(bool negatives) {
 	int wminusone = this->w-1;
 	int h = this->h;
 	this->pivotable_columns_mask->set_zero();
@@ -271,13 +277,13 @@ void Table::calculate_pivots() {
 					best_ratio = ratio;
 			}
 			// the following block allows -1,0 pivoting... *carefull*
-			/*else if ((v<0) && (right_value==0)) {
+			else if ((v<0) && (right_value==0) && (negatives==true)) {
 				this->pivotable_columns[this->pivotable_number] = i;
 				this->pivotable_rows[this->pivotable_number] = j;
 				this->pivotable_ratios[this->pivotable_number]=0.0;
 				this->pivotable_columns_mask->set_bit(i,1);
 				this->pivotable_number += 1;
-			}*/
+			}
 		}
 		for (unsigned char z=0; z<row_memory->length; z++) {// if there is a best row add the info to the datastructure
 			Row_iter* r = &(row_memory->memory[z]);
@@ -464,7 +470,7 @@ bool Table::check_subset_improvable(Mask* anti_subset_mask, double* head, bool m
 	for (int i=t->w-2;i>-1;i--) // cull anticoalition columns (TODO: inefficient)
 		if (anti_subset_mask->get_bit(i)==1)
 			t->delete_column(i,new_head);
-	t->calculate_pivots();
+	t->calculate_pivots(false);
 	
 	Mask_Memory* masks;
 	masks = (Mask_Memory*)calloc(sizeof(Mask_Memory),1);
@@ -508,6 +514,34 @@ void Table::reverse_engineer_pivots() {
 					this->table_pivot_columns[i]=j;
 					this->table_pivot_column_mask->set_bit(j,1);
 					this->table_pivot_column_number += 1;
+					break;
+				}
+			}
+		}
+	}
+}
+
+// assumes no duplicate constraints.
+// also, need to verify that it -allways- visits all degenerate pivot combinations.
+void Table::add_degenerate_pivot_masks(Mask_Memory* masks) {
+	if (this->need_to_recalculate_pivotable == true)
+		this->calculate_pivots(true);
+	Mask new_mask;
+	masks->add(this->table_pivot_column_mask);
+	bool discoveries = true;
+	while (discoveries == true) {
+		discoveries = false;
+		for (int i=0; i<this->pivotable_number; i++) {
+			if (this->pivotable_ratios[i]==0) {
+				new_mask.set(this->table_pivot_column_mask);
+				new_mask.flip_bit(this->pivotable_columns[i]);
+				if (this->pivotable_rows[i] != -1)
+					new_mask.flip_bit(this->table_pivot_columns[this->pivotable_rows[i]]);
+				if (masks->search(&new_mask)==false) {
+					discoveries = true;
+					masks->add(&new_mask);
+					this->pivot(this, i);
+					this->calculate_pivots(true);
 					break;
 				}
 			}

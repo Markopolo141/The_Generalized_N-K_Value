@@ -92,6 +92,129 @@ void equation_pruning(Table* t, int* slackness_columns) {
 	free(head);
 }
 
+struct WalkBackLinked : ValueLinked {
+	Table* t;
+	int pivot_index;
+};
+
+
+
+
+
+double alt_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximising) {
+	Mask field_mask;
+	field_mask.set_ones(t->w-1);
+	~field_mask;
+	Mask working_mask;
+	double extreme_value;
+
+	Table_Memory* table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
+	Table_Memory* unique_table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
+	Mask_Memory* minus_masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
+	Mask_Memory* masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
+	Mask_Memory* intermediary_masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
+	Mask_Memory* face_masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
+	Table* new_t = (Table*)calloc(sizeof(Table),1);
+	double* temp_head = (double*)malloc(sizeof(double)*t->w);
+
+	t->apply_to_head(head,temp_head);
+	new_t->initialise_and_load(t);
+	new_t->calculate_pivots(false);
+
+	table_refs->setup(MEMORY_INITIAL_SIZE);
+	unique_table_refs->setup(MEMORY_INITIAL_SIZE);
+	minus_masks->setup(MEMORY_INITIAL_SIZE);
+	masks->setup(MEMORY_INITIAL_SIZE);
+	intermediary_masks->setup(MEMORY_INITIAL_SIZE);
+	face_masks->setup(MEMORY_INITIAL_SIZE);
+
+	unique_table_refs->add(new_t);
+	
+	bool improvable = new_t->check_subset_improvable(coalition_mask, temp_head, !maximising);
+	double best_improvement;
+	int best_improvement_index;
+	while (improvable==true) {
+		new_t->simplex_improve(temp_head, -max_int, masks, &best_improvement, &best_improvement_index);
+		new_t->pivot(new_t, best_improvement_index);
+		new_t->calculate_pivots(false);
+		new_t->apply_to_head(temp_head,temp_head);
+		improvable = new_t->check_subset_improvable(coalition_mask, temp_head, !maximising);
+	}
+	masks->add(new_t->table_pivot_column_mask);
+	extreme_value = temp_head[new_t->w-1];
+	while (improvable==false) {
+		minus_masks->clear();
+		new_t->add_degenerate_pivot_masks(minus_masks);
+		new_t->simplex_step(temp_head, max_int, &best_improvement, &best_improvement_index);
+		if (*best_improvement_index==-1) { // destinct optima attained
+			return temp_head[new_t->w-1];
+		}
+		new_t->pivot(new_t, best_improvement_index);
+		new_t->calculate_pivots(false);
+		new_t->apply_to_head(temp_head,temp_head);
+		extreme_value = temp_head[new_t->w-1];
+		if (masks->search(new_t->table_pivot_column_mask)==true) { // if degenerate cycling is occuring in context of bland's rule
+			return temp_head[new_t->w-1];
+		}
+		masks->add(new_t->table_pivot_column_mask);
+		improvable = new_t->check_subset_improvable(coalition_mask, temp_head, !maximising);
+	}
+	Mask new_mask;
+	new_mask.set(masks->memory[masks->length-2]);
+	masks->clear();
+	masks->add(new_mask);
+	table_refs->add(new_t);
+
+	int no_ones;
+	while(table_refs->length > 0) {
+		t = table_refs->memory[table_refs->length-1];
+		new_mask->set(masks->memory[masks->length-1];
+		table_refs->length -= 1;
+		masks->length -= 1;
+
+		working_mask.set(new_mask);
+		working_mask = working_mask | t->table_pivot_column_mask;
+		working_mask = working_mask | field_mask;
+		working_mask = ~working_mask;
+		no_ones = working_mask.count_bits();
+		
+		new_t = (Table*)calloc(sizeof(Table),1);
+		new_t->initialise_and_load(t);
+		for (int i=0; i<no_ones; i++) {
+			int ii = 0;
+			int j;
+			for (j=0; j<length; j++) {
+				if (working_mask.get_bit(j) == 1)
+					ii++;
+				if (ii>i)
+					break;
+			}
+			working_mask.flip_bit(j);
+			if (face_masks->search(working_mask) == false) {
+				intermediary_masks->clear();
+				intermediary_masks->add(new_t->table_pivot_column_mask);
+				face_masks->add(working_mask);
+				while() {
+					for (ii=0; ii<new_t->pivotable_number; ii++) {
+						if (working_mask->get_bit(new_t->pivotable_columns[ii])==0) {
+							new_mask.set(this->table_pivot_column_mask);
+							new_mask.flip_bit(this->pivotable_columns[i]);
+							if (this->pivotable_rows[i] != -1)
+								new_mask.flip_bit(this->table_pivot_columns[this->pivotable_rows[i]]);
+							if ((intermediary_masks->search(new_mask)==false) && (minus_masks->search(new_mask)==false)) {
+								intermediary_masks->add(new_mask);
+								new_t->pivot(new_t,ii);
+								break; ///TODO: RAWR!
+							}
+						}
+					}
+				}
+			}
+			working_mask.flip_bit(j);
+		}
+	}
+}
+
 
 /*double super_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximising) {
 	#if DEBUG==1
@@ -106,7 +229,7 @@ void equation_pruning(Table* t, int* slackness_columns) {
 	t->apply_to_head(head,temp_head);
 	Table* new_t = (Table*)calloc(sizeof(Table),1);
 	new_t->initialise_and_load(t);
-	new_t->calculate_pivots();
+	new_t->calculate_pivots(false);
 	
 	Table_Memory* plus_table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
 	Table_Memory* minus_table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
@@ -125,7 +248,7 @@ void equation_pruning(Table* t, int* slackness_columns) {
 		if (new_t->simplex_improve(temp_head, max_int, minus_masks, &best_improvement, &best_improvement_index) == false)
 			break;
 		new_t->pivot(new_t, best_improvement_index);
-		new_t->calculate_pivots();
+		new_t->calculate_pivots(false);
 		new_t->apply_to_head(temp_head,temp_head);
 		improvable = new_t->check_subset_improvable(coalition_mask, temp_head, !maximising);
 	}
@@ -136,7 +259,7 @@ void equation_pruning(Table* t, int* slackness_columns) {
 		if (new_t->simplex_improve(temp_head, -max_int, plus_masks, &best_improvement, &best_improvement_index) == false)
 			break;
 		new_t->pivot(new_t, best_improvement_index);
-		new_t->calculate_pivots();
+		new_t->calculate_pivots(false);
 		new_t->apply_to_head(temp_head,temp_head);
 		improvable = new_t->check_subset_improvable(coalition_mask, temp_head, !maximising);
 	}
@@ -198,7 +321,7 @@ void equation_pruning(Table* t, int* slackness_columns) {
 							printf("table id: %li\n",(long)new_t);
 							new_t->print_pivot_info();
 						#endif
-						new_t->calculate_pivots();
+						new_t->calculate_pivots(false);
 						plus_table_refs->add(new_t);
 						new_t = (Table*)calloc(sizeof(Table),1);
 						new_t->initialise(t->w,t->h);
@@ -243,7 +366,7 @@ void equation_pruning(Table* t, int* slackness_columns) {
 							new_t->print_pivot_info();
 						#endif
 						minus_table_refs->add(new_t);
-						new_t->calculate_pivots();
+						new_t->calculate_pivots(false);
 						new_t = (Table*)calloc(sizeof(Table),1);
 						new_t->initialise(t->w,t->h);
 					}
@@ -309,7 +432,7 @@ double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximisi
 	new_t->table_pivot_columns[t->h]=t->w-1;
 	new_t->table_pivot_column_number += 1;
 	new_t->table_pivot_column_mask->set_bit(t->w-1,1);
-	new_t->calculate_pivots();
+	new_t->calculate_pivots(false);
 	temp_head[t->w] = temp_head[t->w-1];
 	temp_head[t->w-1]=0;
 
@@ -368,7 +491,7 @@ double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximisi
 								break;
 							}
 						}
-						tt->calculate_pivots();
+						tt->calculate_pivots(false);
 						t = tt;
 						refresh = true;
 
@@ -438,7 +561,7 @@ double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximisi
 			t->free_data();
 			free(t);
 			t = table_refs->memory[table_refs->length-1];
-			t->calculate_pivots();
+			t->calculate_pivots(false);
 			table_refs->length -= 1;
 			t->apply_to_head(temp_head,temp_head);
 			
@@ -470,10 +593,7 @@ double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximisi
 
 
 
-struct WalkBackLinked : ValueLinked {
-	Table* t;
-	int pivot_index;
-};
+
 
 double walk_back(Table* t, Mask* coalition, double* original_head, bool maximising) {
 	#if DEBUG==1
@@ -503,7 +623,7 @@ double walk_back(Table* t, Mask* coalition, double* original_head, bool maximisi
 	memcpy (head, original_head, sizeof(double)*w );
 
 	t->simplex(head, maximising);
-	t->calculate_pivots();
+	t->calculate_pivots(false);
 	t->apply_to_head(original_head,head);
 	
 	#if DEBUG==1
@@ -551,7 +671,7 @@ double walk_back(Table* t, Mask* coalition, double* original_head, bool maximisi
 		t->initialise(w,link->t->h);
 		table_refs->add(t);
 		t->pivot(link->t,link->pivot_index);
-		t->calculate_pivots();
+		t->calculate_pivots(false);
 		t->apply_to_head(original_head,head);
 		free(link);
 		

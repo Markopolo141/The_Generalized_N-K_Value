@@ -29,7 +29,7 @@ void test2() {
 	for (int j=0;j<5;j++)
 		t->set(4,j,1.0);
 	t->print();
-	t->calculate_pivots();
+	t->calculate_pivots(false);
 	t->print_pivotable_info();
 	t->free_data();
 	free(t);
@@ -44,7 +44,7 @@ void test3() {
 			t->set(i,j,j*1.0-i-0.5*(i%2));
 	for (int j=0;j<5;j++)
 		t->set(4,j,1.0);
-	t->calculate_pivots();
+	t->calculate_pivots(false);
 	printf("PIVOTING\n");
 	t->pivot(t,0);
 	t->print();
@@ -205,7 +205,7 @@ void test8() {
 
 	printhead(head,t->w);
 	t->print();
-	t->calculate_pivots();
+	t->calculate_pivots(false);
 	t->print_pivot_info();
 	t->print_pivotable_info();
 	printf("pivoting for non-zero z\n");
@@ -252,7 +252,7 @@ void test9() {
 
 	printhead(head,t->w);
 	t->print();
-	t->calculate_pivots();
+	t->calculate_pivots(false);
 	t->print_pivot_info();
 	t->print_pivotable_info();
 	printf("pivoting for non-zero z\n");
@@ -300,7 +300,7 @@ void test10() {
 
 	printhead(head,t->w);
 	t->print();
-	t->calculate_pivots();
+	t->calculate_pivots(false);
 	t->print_pivot_info();
 	t->print_pivotable_info();
 	printf("pivoting for non-zero z\n");
@@ -347,7 +347,7 @@ void test11() {
 
 	printhead(head,t->w);
 	t->print();
-	t->calculate_pivots();
+	t->calculate_pivots(false);
 	t->print_pivot_info();
 	t->print_pivotable_info();
 	printf("pivoting for non-zero z\n");
@@ -395,7 +395,7 @@ void test12() {
 
 	printhead(head,t->w);
 	t->print();
-	t->calculate_pivots();
+	t->calculate_pivots(false);
 	t->print_pivot_info();
 	t->print_pivotable_info();
 	printf("pivoting for non-zero z\n");
@@ -442,7 +442,7 @@ void test13() {
 
 	printhead(head,t->w);
 	t->print();
-	t->calculate_pivots();
+	t->calculate_pivots(false);
 	t->print_pivot_info();
 	t->print_pivotable_info();
 	printf("pivoting for non-zero z\n");
@@ -492,7 +492,7 @@ void test14() {
 
 	printhead(head,t->w);
 	t->print();
-	t->calculate_pivots();
+	t->calculate_pivots(false);
 	t->print_pivot_info();
 	t->print_pivotable_info();
 	printf("pivoting for non-zero z\n");
@@ -539,7 +539,7 @@ void test15() {
 
 	printhead(head,t->w);
 	t->print();
-	t->calculate_pivots();
+	t->calculate_pivots(false);
 	t->print_pivot_info();
 	t->print_pivotable_info();
 	printf("pivoting for non-zero z\n");
@@ -627,6 +627,31 @@ void test17() {
 	free(head);
 }
 
+void test18() {
+	Table* t = (Table*)malloc(sizeof(Table));
+	t->initialise_and_wipe(10, 6);
+	t->set(0,0,1.0);	t->set(1,0,0.0);	t->set(2,0,0.0);	t->set(3,0,1.0);	t->set(4,0,0.0);	t->set(5,0,0.0);	t->set(6,0,0.0);	t->set(7,0,0.0);	t->set(8,0,0.0);	t->set(9,0,1.0);
+	t->set(0,1,0.0);	t->set(1,1,1.0);	t->set(2,1,0.0);	t->set(3,1,0.0);	t->set(4,1,1.0);	t->set(5,1,0.0);	t->set(6,1,0.0);	t->set(7,1,0.0);	t->set(8,1,0.0);	t->set(9,1,1.0);
+	t->set(0,2,0.0);	t->set(1,2,0.0);	t->set(2,2,1.0);	t->set(3,2,0.0);	t->set(4,2,0.0);	t->set(5,2,1.0);	t->set(6,2,0.0);	t->set(7,2,0.0);	t->set(8,2,0.0);	t->set(9,2,1.0);
+	t->set(0,3,0.3);	t->set(1,3,0.3);	t->set(2,3,0.4);	t->set(3,3,0.0);	t->set(4,3,0.0);	t->set(5,3,0.0);	t->set(6,3,1.0);	t->set(7,3,0.0);	t->set(8,3,0.0);	t->set(9,3,1.0);
+	t->set(0,4,0.4);	t->set(1,4,0.3);	t->set(2,4,0.3);	t->set(3,4,0.0);	t->set(4,4,0.0);	t->set(5,4,1.0);	t->set(6,4,0.0);	t->set(7,4,1.0);	t->set(8,4,0.0);	t->set(9,4,1.0);
+	t->set(0,5,0.3);	t->set(1,5,0.4);	t->set(2,5,0.3);	t->set(3,5,0.0);	t->set(4,5,0.0);	t->set(5,5,1.0);	t->set(6,5,0.0);	t->set(7,5,0.0);	t->set(8,5,1.0);	t->set(9,5,1.0);
+	t->reverse_engineer_pivots();
+	t->print();
+	t->pivot(t,0,0);
+	t->pivot(t,1,1);
+	t->pivot(t,2,2);
+	printf("\n");
+	t->print();
+
+	Mask_Memory* masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
+	masks->setup(MEMORY_INITIAL_SIZE);
+	t->add_degenerate_pivot_masks(masks);
+	printf("masks %i\n",masks->length);
+	masks->print_all();
+	printf("should be 20\n");
+}
+
 int main() {
 	//test1();
 	//test2();
@@ -644,7 +669,8 @@ int main() {
 	//test14();
 	//test15();
 	//test16();
-	test17();
+	//test17();
+	test18();
 	printf("hello\n");
 	return 0;
 }
