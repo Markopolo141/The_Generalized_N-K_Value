@@ -151,14 +151,16 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printf("about to compute on coalition\n");
 	#endif
 	//r += 0.5*walk_back(prev_min_table, &coalition, temporary_head, true);
-	r += 0.5*bilevel_solve(prev_min_table, &coalition, temporary_head, true);
+	//r += 0.5*bilevel_solve(prev_min_table, &coalition, temporary_head, true);
+	//r += 0.5*alt_bilevel_solve(prev_min_table, &coalition, temporary_head, true);
 	for (int i=0; i< t->w; i++)
 		temporary_head[i] = -(2*((int)(coalition.get_bit(i)))-1)*master_head[i];
 	#if DEBUG==1
 		printf("about to compute on anticoalition\n");
 	#endif
 	//r += 0.5*walk_back(prev_max_table, &anticoalition, temporary_head, false);
-	r += 0.5*bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
+	//r += 0.5*bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
+	r += 0.5*alt_bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
 	
 	return PyFloat_FromDouble(r);
 }
@@ -183,7 +185,7 @@ static PyObject* all_pivots(PyObject* self, PyObject* args) {
 	Table* t;
 	t = analyse_pyobject_table(array);
 	t->reverse_engineer_pivots();
-	t->calculate_pivots();
+	t->calculate_pivots(true);
 
 	/*printf("ALL_PIVOTS\n");
 	t->print();
@@ -219,7 +221,7 @@ static PyObject* all_pivots(PyObject* self, PyObject* args) {
 				Table* tt = (Table*)malloc(sizeof(Table));
 				tt->initialise(t->w,t->h);
 				tt->pivot(t,i);
-				tt->calculate_pivots();
+				tt->calculate_pivots(true);
 				table_refs->add(tt);
 			}
 		}
@@ -257,29 +259,39 @@ static PyObject* all_pivots(PyObject* self, PyObject* args) {
 
 static PyObject* all_pivots_dot(PyObject* self, PyObject* args) {
 	free_memory();
+	bool maximising;
 
 	PyObject *array;
-	PyObject *number;
 	PyObject *input_head;
+	PyObject *number;
+	PyObject *maximiser_number;
 	Mask coalition;
 	coalition.set_zero();
 	
 	Py_ssize_t TupleSize = PyTuple_Size(args);
-	if(TupleSize != 3)
+	if(TupleSize != 4)
 		return python_error("You must supply one argument.");
 	array = PyTuple_GetItem(args,0);
 	input_head = PyTuple_GetItem(args,1);
 	number = PyTuple_GetItem(args,2);
+	maximiser_number = PyTuple_GetItem(args,3);
 	if (PyNumber_Check(number) != 1)
 		return python_error("Non-numeric argument.");
+	if (PyNumber_Check(maximiser_number) != 1)
+		return python_error("Non-numeric argument.");
 	coalition.A = PyLong_AsUnsignedLong(PyNumber_Long(number));
+	if (PyInt_AsLong(maximiser_number) == 1.0) {
+		maximising=true;
+	} else {
+		maximising=false;
+	}
 	if (PyErr_Occurred()!= NULL)
 		return python_error("Error occured..");
 	
 	Table* t;
 	t = analyse_pyobject_table(array);
 	t->reverse_engineer_pivots();
-	t->calculate_pivots();
+	t->calculate_pivots(true);
 	
 	setup_memory(t);
 	if (set_head(input_head, t->w)==-1)
@@ -306,7 +318,7 @@ static PyObject* all_pivots_dot(PyObject* self, PyObject* args) {
 	printf("label=\"");
 	t->table_pivot_column_mask->print_small();
 	printf(",%.1f\",",temporary_head[t->w-1]);
-	if (t->check_subset_improvable(&coalition, temporary_head, false))
+	if (t->check_subset_improvable(&coalition, temporary_head, !maximising))
 		printf("color=blue");
 	printf("];\n");
 
@@ -326,7 +338,7 @@ static PyObject* all_pivots_dot(PyObject* self, PyObject* args) {
 				Table* tt = (Table*)malloc(sizeof(Table));
 				tt->initialise(t->w,t->h);
 				tt->pivot(t,i);
-				tt->calculate_pivots();
+				tt->calculate_pivots(true);
 				table_refs->add(tt);
 				
 				printf("\t");
@@ -336,7 +348,7 @@ static PyObject* all_pivots_dot(PyObject* self, PyObject* args) {
 				printf("label=\"");
 				tt->table_pivot_column_mask->print_small();
 				printf(",%.1f\",",temporary_head[tt->w-1]);
-				if (tt->check_subset_improvable(&coalition, temporary_head, false))
+				if (tt->check_subset_improvable(&coalition, temporary_head, !maximising))
 					printf("color=blue");
 				printf("];\n");
 			}

@@ -163,6 +163,8 @@ inline void Table::set(int c, int r, double v) {
 }
 
 void Table::simplex_step(double* head, int max_int, double* best_improvement, int* best_improvement_index) {
+	*best_improvement=0;
+	*best_improvement_index = -1;
 	int smallest_out_column = -1;
 	for (int pivot_index=0; pivot_index < this->pivotable_number; pivot_index++) {
 		double head_value = head[this->pivotable_columns[pivot_index]];
@@ -192,8 +194,6 @@ bool Table::simplex_improve(double* head, int max_int, Mask_Memory* masks, doubl
 	masks->clear();
 	masks->add(this->table_pivot_column_mask);
 	while (true) {
-		*best_improvement=0;
-		*best_improvement_index = -1;
 		this->simplex_step(head, max_int, best_improvement, best_improvement_index);
 		if (*best_improvement_index==-1) // destinct optima attained
 			return false;

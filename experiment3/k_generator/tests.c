@@ -628,6 +628,7 @@ void test17() {
 }
 
 void test18() {
+	printf("TEST18\n");
 	Table* t = (Table*)malloc(sizeof(Table));
 	t->initialise_and_wipe(10, 6);
 	t->set(0,0,1.0);	t->set(1,0,0.0);	t->set(2,0,0.0);	t->set(3,0,1.0);	t->set(4,0,0.0);	t->set(5,0,0.0);	t->set(6,0,0.0);	t->set(7,0,0.0);	t->set(8,0,0.0);	t->set(9,0,1.0);
@@ -652,6 +653,46 @@ void test18() {
 	printf("should be 20\n");
 }
 
+void test19() {
+	printf("TEST19\n");
+	Mask coalition;
+	coalition.set_zero();
+	coalition.A = 20;
+	double* head = (double*)calloc(sizeof(double),10);
+	Table* t = (Table*)malloc(sizeof(Table));
+	t->initialise_and_wipe(9, 3);
+		
+	head[0]=0.7;	head[1]=-0.8;	head[2]=-1.9;	head[3]=1.3;	head[4]=-0.4;	head[5]=1.5;
+//01001100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+	t->set(0,0,1);	t->set(1,0,0);	t->set(2,0,1);	t->set(3,0,1);	t->set(4,0,1);	t->set(5,0,0);	t->set(6,0,1);	t->set(7,0,-1);	t->set(8,0,45);
+	t->set(0,1,0);	t->set(1,1,0);	t->set(2,1,0);	t->set(3,1,0);	t->set(4,1,0);	t->set(5,1,1);	t->set(6,1,0);	t->set(7,1,1);	t->set(8,1,32);
+	t->set(0,2,0);	t->set(1,2,1);	t->set(2,2,0);	t->set(3,2,0);	t->set(4,2,0);	t->set(5,2,0);	t->set(6,2,1);	t->set(7,2,0);	t->set(8,2,77);
+
+	t->table_pivot_columns[0]=4;
+	t->table_pivot_columns[1]=5;
+	t->table_pivot_columns[2]=1;
+	t->table_pivot_column_mask->set_zero();
+	t->table_pivot_column_mask->A=50;
+	t->table_pivot_column_number=3;
+
+	t->calculate_pivots(false);
+
+	printhead(head,t->w);
+	t->print();
+	t->print_pivot_info();
+	t->print_pivotable_info();
+	
+	printf("should all be the same:\n");
+	printf("%f\n",alt_bilevel_solve(t, &coalition, head, false));
+	printf("%f\n",bilevel_solve(t, &coalition, head, false));
+	printf("%f\n",walk_back(t, &coalition, head, false));
+	
+	free(head);
+	t->free_data();
+	free(t);
+	
+}
+
 int main() {
 	//test1();
 	//test2();
@@ -670,7 +711,8 @@ int main() {
 	//test15();
 	//test16();
 	//test17();
-	test18();
+	//test18();
+	test19();
 	printf("hello\n");
 	return 0;
 }

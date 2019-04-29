@@ -24,7 +24,8 @@ def worker(number,data,ppc):
 	seed(32000)
 	m = 100
 	setup(ppc)
-	print v([0,3,5,1])
+	for i in range(10000000):
+		print v([0,3,5,1])
 	sys.exit(0)
 	listi = list(range(N))
 	shuffle(listi)

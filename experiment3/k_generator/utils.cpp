@@ -70,7 +70,7 @@ class Mask {
 	void print_small() {
 		long a = this->A;
 		while (a!=0) {
-			printf("%i",a&1);
+			printf("%i",(int)(a&1));
 			a >>= 1;
 		}
 	}
