@@ -158,9 +158,9 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	#if DEBUG==1
 		printf("about to compute on anticoalition\n");
 	#endif
-	//r += 0.5*walk_back(prev_max_table, &anticoalition, temporary_head, false);
+	r += 0.5*walk_back(prev_max_table, &anticoalition, temporary_head, false);
 	//r += 0.5*bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
-	r += 0.5*alt_bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
+	//r += 0.5*alt_bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
 	
 	return PyFloat_FromDouble(r);
 }
@@ -198,7 +198,7 @@ static PyObject* all_pivots(PyObject* self, PyObject* args) {
 	table_refs->setup(MEMORY_INITIAL_SIZE);
 	Mask* new_mask = (Mask*)malloc(sizeof(Mask));
 	
-	masks->add(t->table_pivot_column_mask);
+	masks->add(t->table_pivot_column_mask, false);
 	table_refs->add(t);
 	while(table_refs->length != 0) {
 		t = table_refs->memory[table_refs->length-1];
@@ -217,7 +217,7 @@ static PyObject* all_pivots(PyObject* self, PyObject* args) {
 				printf(" to ");
 				new_mask->print();
 				printf("\n");*/
-				masks->add(new_mask);
+				masks->add(new_mask, false);
 				Table* tt = (Table*)malloc(sizeof(Table));
 				tt->initialise(t->w,t->h);
 				tt->pivot(t,i);
@@ -291,7 +291,9 @@ static PyObject* all_pivots_dot(PyObject* self, PyObject* args) {
 	Table* t;
 	t = analyse_pyobject_table(array);
 	t->reverse_engineer_pivots();
-	t->calculate_pivots(true);
+	t->attempt_make_rational();
+	t->calculate_pivots(false);
+	
 	
 	setup_memory(t);
 	if (set_head(input_head, t->w)==-1)
@@ -299,14 +301,14 @@ static PyObject* all_pivots_dot(PyObject* self, PyObject* args) {
 
 	for (int i=0; i< t->w; i++)
 		master_head[i] = -(2*((int)(coalition.get_bit(i)))-1)*master_head[i];
-	
+
 	Mask_Memory* masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
 	masks->setup(MEMORY_INITIAL_SIZE);
 	Table_Memory* table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
 	table_refs->setup(MEMORY_INITIAL_SIZE);
 	Mask* new_mask = (Mask*)malloc(sizeof(Mask));
 	
-	masks->add(t->table_pivot_column_mask);
+	masks->add(t->table_pivot_column_mask, false);
 	table_refs->add(t);
 
 	//coalition.print();
@@ -334,11 +336,11 @@ static PyObject* all_pivots_dot(PyObject* self, PyObject* args) {
 			if (t->pivotable_rows[i] != -1)
 				new_mask->flip_bit(t->table_pivot_columns[t->pivotable_rows[i]]);
 			if (masks->search(new_mask)==false) {
-				masks->add(new_mask);
+				masks->add(new_mask, false);
 				Table* tt = (Table*)malloc(sizeof(Table));
 				tt->initialise(t->w,t->h);
 				tt->pivot(t,i);
-				tt->calculate_pivots(true);
+				tt->calculate_pivots(false);
 				table_refs->add(tt);
 				
 				printf("\t");

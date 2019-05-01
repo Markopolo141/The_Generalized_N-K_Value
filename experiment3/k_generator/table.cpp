@@ -38,7 +38,8 @@ struct Table {
 	bool simplex_improve(double* head, int max_int, Mask_Memory* masks, double* best_improvement, int* best_improvement_index); // do degenerate pivots until the first nondegenerate simplex step (if possible)
 	void simplex_step(double* head, int max_int, double* best_improvement, int* best_improvement_index); // select the next step in simplex process
 	void reverse_engineer_pivots(); // given a table without pivot information, do best attempt at reconstructing pivot info (insofar as there are pivots in the table)
-	void add_degenerate_pivot_masks(Mask_Memory* masks);
+	void add_degenerate_pivot_masks(Mask_Memory* masks); // for a mask memory, attempt to cycle the table through all the degenerate pivots corresponding the the current vertex
+	void attempt_make_rational(); // for an imcomplete pivot table, attempt to pivot the table to give it a full pivot set.
 
 	void print(); // print table itself
 	void print_pivot_info(); // debug info on table pivot columns
@@ -192,7 +193,7 @@ bool Table::simplex_improve(double* head, int max_int, Mask_Memory* masks, doubl
 	if (this->need_to_recalculate_pivotable==true)
 		printf("WARNING: sub-simplexing on outdated table pivot info\n");
 	masks->clear();
-	masks->add(this->table_pivot_column_mask);
+	masks->add(this->table_pivot_column_mask, false);
 	while (true) {
 		this->simplex_step(head, max_int, best_improvement, best_improvement_index);
 		if (*best_improvement_index==-1) // destinct optima attained
@@ -204,7 +205,7 @@ bool Table::simplex_improve(double* head, int max_int, Mask_Memory* masks, doubl
 			return false;
 		this->calculate_pivots(false);
 		this->apply_to_head(head,head);
-		masks->add(this->table_pivot_column_mask);
+		masks->add(this->table_pivot_column_mask, false);
 	}
 }
 
@@ -527,7 +528,7 @@ void Table::add_degenerate_pivot_masks(Mask_Memory* masks) {
 	if (this->need_to_recalculate_pivotable == true)
 		this->calculate_pivots(true);
 	Mask new_mask;
-	masks->add(this->table_pivot_column_mask);
+	masks->add(this->table_pivot_column_mask, true);
 	bool discoveries = true;
 	while (discoveries == true) {
 		discoveries = false;
@@ -539,9 +540,27 @@ void Table::add_degenerate_pivot_masks(Mask_Memory* masks) {
 					new_mask.flip_bit(this->table_pivot_columns[this->pivotable_rows[i]]);
 				if (masks->search(&new_mask)==false) {
 					discoveries = true;
-					masks->add(&new_mask);
+					masks->add(&new_mask, false);
 					this->pivot(this, i);
 					this->calculate_pivots(true);
+					break;
+				}
+			}
+		}
+	}
+}
+
+void Table::attempt_make_rational() {
+	if (this->need_to_recalculate_pivotable == true)
+		this->calculate_pivots(false);
+	for (int i=0; i<this->h; i++) {
+		if (this->table_pivot_columns[i] == -1) {
+			int j;
+			int pivot_number = this->pivotable_number;
+			for (j=0; j<pivot_number; j++) {
+				if (this->pivotable_rows[j]==i) {
+					this->pivot(this,j);
+					this->calculate_pivots(false);
 					break;
 				}
 			}

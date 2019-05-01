@@ -4,7 +4,9 @@ struct Mask_Memory {
 	unsigned long mem_size;
 	unsigned long length;
 	
-	void add(Mask* l);
+	void add(Mask* l, bool searching);
+	void add_all(Mask_Memory* m, bool searching);
+	void duplicate(Mask_Memory* m, bool searching);
 	bool search(Mask* datum);
 	void clear();
 	void destroy();
@@ -21,16 +23,32 @@ void Mask_Memory::print_all() {
 	}
 }
 
-void Mask_Memory::add(Mask* l) {
-	if (this->length == this->mem_size) {
-		this->memory = (Mask*)realloc(this->memory, sizeof(Mask)*this->mem_size*2);
-		if (this->memory==NULL)
-			printf("ERROR: reallocating memory failure\n");
-		this->mem_size *= 2;
+void Mask_Memory::add(Mask* l, bool searching) {
+	if ((searching==false) || (this->search(l)==false)) {
+		if (this->length == this->mem_size) {
+			this->memory = (Mask*)realloc(this->memory, sizeof(Mask)*this->mem_size*2);
+			if (this->memory==NULL)
+				printf("ERROR: reallocating memory failure\n");
+			this->mem_size *= 2;
+		}
+		this->memory[length].set(l);
+		this->length += 1;
 	}
-	this->memory[length].set(l);
-	this->length += 1;
 }
+
+void Mask_Memory::add_all(Mask_Memory* m, bool searching) {
+	for (unsigned int i=0; i<m->length; i++) {
+		this->add(&(m->memory[i]), searching);
+	}
+}
+
+void Mask_Memory::duplicate(Mask_Memory* m, bool searching) {
+	this->length=0;
+	for (unsigned int i=0; i<m->length; i++) {
+		this->add(&(m->memory[i]), searching);
+	}
+}
+
 bool Mask_Memory::search(Mask* datum) {
 	for (long l=this->length-1; l >-1; l--)
 		if (this->memory[l]==(*datum))

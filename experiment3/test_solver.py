@@ -24,8 +24,9 @@ def worker(number,data,ppc):
 	seed(32000)
 	m = 100
 	setup(ppc)
-	for i in range(10000000):
-		print v([0,3,5,1])
+	print v([0,2,4])
+	#for i in range(10000000):
+	#	print v([0,3,5,1])
 	sys.exit(0)
 	listi = list(range(N))
 	shuffle(listi)
@@ -37,12 +38,11 @@ def worker(number,data,ppc):
 			#if (int(random()*4)==0):
 			#	spruik_solver()
 			vv = listi[0:i]
-			#print "ZOGZOGZOG {} {}".format(v(vv),vv)
 			#v(vv)
 			#print "{}\t".format(v(vv)),
 			t = time.time()
 			output.append(int(v(vv)))
-			print i,time.time()-t
+			print i,time.time()-t,vv
 		print output
 		#print ""
 

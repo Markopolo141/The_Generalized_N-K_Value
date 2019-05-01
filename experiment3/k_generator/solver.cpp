@@ -109,10 +109,12 @@ double alt_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maxi
 	Mask working_mask;
 	double extreme_value;
 	Table* T[2];
+	Table* t_minus;
 
 	Table_Memory* table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
+	Table_Memory* minus_table_refs = (Table_Memory*)malloc(sizeof(Table_Memory));
 	Mask_Memory* minus_masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
-	Mask_Memory* masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
+	Mask_Memory* minus_masks_holder = (Mask_Memory*)malloc(sizeof(Mask_Memory));
 	Mask_Memory* intermediary_masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
 	Mask_Memory* face_masks = (Mask_Memory*)malloc(sizeof(Mask_Memory));
 	T[0] = (Table*)calloc(sizeof(Table),1);
@@ -126,8 +128,9 @@ double alt_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maxi
 	T[1]->calculate_pivots(false);
 
 	table_refs->setup(MEMORY_INITIAL_SIZE);
+	minus_table_refs->setup(MEMORY_INITIAL_SIZE);
 	minus_masks->setup(MEMORY_INITIAL_SIZE);
-	masks->setup(MEMORY_INITIAL_SIZE);
+	minus_masks_holder->setup(MEMORY_INITIAL_SIZE);
 	intermediary_masks->setup(MEMORY_INITIAL_SIZE);
 	face_masks->setup(MEMORY_INITIAL_SIZE);
 
@@ -151,7 +154,7 @@ double alt_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maxi
 		ti ^= 1;
 		improvable = T[ti]->check_subset_improvable(coalition_mask, temp_head, !maximising);
 	}
-	masks->add(T[ti^1]->table_pivot_column_mask);
+	minus_masks_holder->add(T[ti^1]->table_pivot_column_mask, false);
 	#if DEBUG==1
 		printf("first_stage_table: \n");
 		printhead(temp_head,t->w);
@@ -174,13 +177,13 @@ double alt_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maxi
 		T[ti]->pivot(T[ti^1], best_improvement_index);
 		T[ti]->calculate_pivots(false);
 		T[ti]->apply_to_head(head,temp_head);
-		if (masks->search(T[ti]->table_pivot_column_mask)==true) { // if degenerate cycling is occuring in context of bland's rule
+		if (minus_masks_holder->search(T[ti]->table_pivot_column_mask)==true) { // if degenerate cycling is occuring in context of bland's rule
 			#if DEBUG==1
 				printf("distinct cycling optima attained, early exit\n");
 			#endif
 			return temp_head[T[ti]->w-1];
 		}
-		masks->add(T[ti]->table_pivot_column_mask);
+		minus_masks_holder->add(T[ti]->table_pivot_column_mask, false);
 		improvable = T[ti]->check_subset_improvable(coalition_mask, temp_head, !maximising);
 		ti ^= 1;
 	}
@@ -189,31 +192,32 @@ double alt_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maxi
 		printhead(temp_head,t->w);
 		T[ti^1]->print();
 		printf("mask iteration\n");
-		masks->print_all();
+		minus_masks_holder->print_all();
 		printf("moving to main iteration\n");
 	#endif
 	T[ti]->add_degenerate_pivot_masks(minus_masks);
 	Mask new_mask;
-	new_mask.set(masks->memory[masks->length-2]);
-	masks->clear();
-	masks->add(&new_mask);
 	table_refs->add(T[ti^1]);
+	minus_table_refs->add(T[ti]);
+	T[ti] = (Table*)calloc(sizeof(Table),1);
+	T[ti]->initialise_and_load(t);
 	T[ti^1] = (Table*)calloc(sizeof(Table),1);
 	T[ti^1]->initialise_and_load(t);
 
 	#if DEBUG==1
 		printf("about to begin main_iteration\n minus_masks:");
 		minus_masks->print_all();
-		printf("masks:\n");
-		masks->print_all();
 	#endif
 
 	int no_ones;
 	while(table_refs->length > 0) {
 		t = table_refs->memory[table_refs->length-1];
-		working_mask.set(masks->memory[masks->length-1]);
+		t_minus = minus_table_refs->memory[minus_table_refs->length-1];
+		working_mask.set(t_minus->table_pivot_column_mask);
 		table_refs->length -= 1;
-		masks->length -= 1;
+		minus_table_refs->length -= 1;
+		minus_masks_holder->clear();
+		t_minus->add_degenerate_pivot_masks(minus_masks_holder);
 
 		#if DEBUG==1
 			printf("selecting table_mask_pair:\n");
@@ -256,9 +260,10 @@ double alt_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maxi
 					printf("working mask deigned to be novel face\n");
 				#endif
 				intermediary_masks->clear();
-				intermediary_masks->add(T[ti^1]->table_pivot_column_mask);
-				face_masks->add(&working_mask);
+				intermediary_masks->add(T[ti^1]->table_pivot_column_mask, false);
+				face_masks->add(&working_mask, false);
 				improvable=true;
+				bool pivoted_atleast_once = false;
 				while(improvable==true) {
 					int pivotable_number = T[ti^1]->pivotable_number;
 					for (ii=0; ii<pivotable_number; ii++) {
@@ -274,8 +279,12 @@ double alt_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maxi
 								printf("re-contemplating pivot c=%i r=%i\n",T[ti^1]->pivotable_columns[ii],T[ti^1]->pivotable_rows[ii]);
 								new_mask.print();
 							#endif
-							if ((intermediary_masks->search(&new_mask)==false) && (minus_masks->search(&new_mask)==false)) {
-								intermediary_masks->add(&new_mask);
+							if (
+								(intermediary_masks->search(&new_mask)==false) && 
+								(	(minus_masks->search(&new_mask)==false) || 
+									(	(pivoted_atleast_once==true) && 
+										(minus_masks_holder->search(&new_mask)==true)	))) {
+								intermediary_masks->add(&new_mask, false);
 								T[ti]->pivot(T[ti^1],ii);
 								T[ti]->calculate_pivots(false);
 								T[ti]->apply_to_head(head,temp_head);
@@ -285,6 +294,7 @@ double alt_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maxi
 									T[ti]->print();
 								#endif
 								ti ^= 1;
+								pivoted_atleast_once = true;
 								break;
 							}
 							#if DEBUG==1
@@ -314,9 +324,7 @@ double alt_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maxi
 						T[ti^1]->table_pivot_column_mask->print();
 					#endif
 					table_refs->add(T[ti]);
-					T[ti] = (Table*)calloc(sizeof(Table),1);
-					T[ti]->initialise_and_load(t);
-					masks->add(T[ti^1]->table_pivot_column_mask);
+					minus_table_refs->add(T[ti^1]);
 					T[ti^1]->apply_to_head(head,temp_head);
 					if (temp_head[T[ti^1]->w-1]*max_int>extreme_value*max_int) {
 						extreme_value = temp_head[T[ti^1]->w-1];
@@ -332,12 +340,18 @@ double alt_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maxi
 						printf("updating minus_masks:\n");
 						minus_masks->print_all();
 					#endif
+					T[ti] = (Table*)calloc(sizeof(Table),1);
+					T[ti]->initialise_and_load(t);
+					T[ti^1] = (Table*)calloc(sizeof(Table),1);
+					T[ti^1]->initialise_and_load(t);
 				}
 			}
 			working_mask.flip_bit(j);
 		}
 		t->free_data();
 		free(t);
+		t_minus->free_data();
+		free(t_minus);
 	}
 	#if DEBUG==1
 		printf("freeing all memory\n");
@@ -345,18 +359,21 @@ double alt_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maxi
 	
 	table_refs->free_all();
 	table_refs->destroy();
+	minus_table_refs->free_all();
+	minus_table_refs->destroy();
 	T[0]->free_data();
 	T[1]->free_data();
 	minus_masks->destroy();
-	masks->destroy();
+	minus_masks_holder->destroy();
 	intermediary_masks->destroy();
 	face_masks->destroy();
 
 	free(table_refs);
+	free(minus_table_refs);
 	free(T[0]);
 	free(T[1]);
 	free(minus_masks);
-	free(masks);
+	free(minus_masks_holder);
 	free(intermediary_masks);
 	free(face_masks);
 	free(temp_head);
@@ -591,7 +608,7 @@ double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximisi
 	Mask new_mask;
 	bool refresh;
 
-	neutral_masks->add(t->table_pivot_column_mask);
+	neutral_masks->add(t->table_pivot_column_mask, false);
 	
 	#if DEBUG==1
 		printf("BILEVEL SOLVE BEGIN\n");
@@ -634,7 +651,7 @@ double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximisi
 						t->free_data();
 						free(t);
 						neutral_masks->clear();
-						neutral_masks->add(&new_mask);
+						neutral_masks->add(&new_mask, false);
 						tt->apply_to_head(head,temp_head);
 						for (int k=0;k<(tt->h);k++) {
 							if (tt->table_pivot_columns[k]==(tt->w)-2) {
@@ -664,7 +681,7 @@ double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximisi
 						#endif
 						tt->free_data();
 						free(tt);
-						plus_masks->add(&new_mask);
+						plus_masks->add(&new_mask, false);
 					}
 				}
 			}
@@ -692,7 +709,7 @@ double bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maximisi
 						#if DEBUG==1
 							printf("adding table\n");
 						#endif
-						neutral_masks->add(&new_mask);
+						neutral_masks->add(&new_mask, false);
 						Table* tt = (Table*)malloc(sizeof(Table));
 						tt->initialise(t->w,t->h);
 						tt->pivot(t,i);
@@ -788,7 +805,7 @@ double walk_back(Table* t, Mask* coalition, double* original_head, bool maximisi
 		t->print();
 	#endif
 
-	masks->add(t->table_pivot_column_mask);
+	masks->add(t->table_pivot_column_mask, false);
 	Mask* new_mask = (Mask*)malloc(sizeof(Mask));
 	while (t->check_subset_improvable(coalition, head, !maximising)==true) {
 		#if DEBUG==1
@@ -806,7 +823,7 @@ double walk_back(Table* t, Mask* coalition, double* original_head, bool maximisi
 				link->pivot_index = i;
 				link->v = max_int*(head[w-1] - t->pivotable_ratios[i]*head[t->pivotable_columns[i]]);
 				pivot_list->add(link);
-				masks->add(new_mask);
+				masks->add(new_mask, false);
 			}
 		}
 		
