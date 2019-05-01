@@ -151,15 +151,15 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printf("about to compute on coalition\n");
 	#endif
 	//r += 0.5*walk_back(prev_min_table, &coalition, temporary_head, true);
-	//r += 0.5*bilevel_solve(prev_min_table, &coalition, temporary_head, true);
+	r += 0.5*bilevel_solve(prev_min_table, &coalition, temporary_head, true);
 	//r += 0.5*alt_bilevel_solve(prev_min_table, &coalition, temporary_head, true);
 	for (int i=0; i< t->w; i++)
 		temporary_head[i] = -(2*((int)(coalition.get_bit(i)))-1)*master_head[i];
 	#if DEBUG==1
 		printf("about to compute on anticoalition\n");
 	#endif
-	r += 0.5*walk_back(prev_max_table, &anticoalition, temporary_head, false);
-	//r += 0.5*bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
+	//r += 0.5*walk_back(prev_max_table, &anticoalition, temporary_head, false);
+	r += 0.5*bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
 	//r += 0.5*alt_bilevel_solve(prev_max_table, &anticoalition, temporary_head, false);
 	
 	return PyFloat_FromDouble(r);

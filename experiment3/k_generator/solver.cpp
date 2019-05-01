@@ -211,6 +211,9 @@ double alt_bilevel_solve(Table* t, Mask* coalition_mask, double* head, bool maxi
 
 	int no_ones;
 	while(table_refs->length > 0) {
+
+		printf("%i\n",table_refs->length);
+
 		t = table_refs->memory[table_refs->length-1];
 		t_minus = minus_table_refs->memory[minus_table_refs->length-1];
 		working_mask.set(t_minus->table_pivot_column_mask);
