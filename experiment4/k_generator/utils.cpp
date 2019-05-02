@@ -43,7 +43,7 @@ inline int count_the_bits(unsigned long A) {
 }
 
 #define DOUBLE 1
-#define TRIPPLE 0
+#define TRIPPLE 1
 
 class Mask {
 	public:
