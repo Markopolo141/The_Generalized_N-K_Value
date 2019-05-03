@@ -16,12 +16,9 @@ struct Table {
 	bool need_to_recalculate_pivotable; // a flag that is raised to indicate whether the calculate_pivots needs tobe called
 	
 	void initialise(int w, int h);
-	void initialise_and_wipe(int w, int h);
-	void initialise_and_load(Table* t);
 	void reset_pivot_information();
 	void free_data();
 	void load(Table* t);
-	void resize_table(int w, int h); // redimensions all data structures for bigger/smaller data size - warning: scrambles data
 	
 	inline double get(int c, int r);
 	inline void set(int c, int r, double v);
@@ -32,14 +29,9 @@ struct Table {
 	void calculate_pivots(bool negatives); // scan through the table and select all the viable pivot points
 	void pivot(Table* t, int pivotable_index); // given table t (which can be -this-) with its pivotable index, mutate this table to be the pivoted result
 	void pivot(Table* t, int column, int row); // given table t (which can be -this-) mutate this table to be pivoted by the row,column pivot point.
-	int shallow_check_subset_improvable(Mask* anti_subset_mask, double* head, bool maximising); // scan through this table and detect whether the coalition identified by the anti-subset-mask can improve on a one pass
-	bool check_subset_improvable(Mask* anti_subset_mask, double* head, bool maximising); // do a comprehensive check whether the coalition identified by the anti-subset-mask can improve.
 	double simplex(double* head, bool maximising); // conduct a full simplex to the table.
 	bool simplex_improve(double* head, int max_int, Mask_Memory* masks, double* best_improvement, int* best_improvement_index); // do degenerate pivots until the first nondegenerate simplex step (if possible)
 	void simplex_step(double* head, int max_int, double* best_improvement, int* best_improvement_index); // select the next step in simplex process
-	void reverse_engineer_pivots(); // given a table without pivot information, do best attempt at reconstructing pivot info (insofar as there are pivots in the table)
-	void add_degenerate_pivot_masks(Mask_Memory* masks); // for a mask memory, attempt to cycle the table through all the degenerate pivots corresponding the the current vertex
-	void attempt_make_rational(); // for an imcomplete pivot table, attempt to pivot the table to give it a full pivot set.
 
 	void print(); // print table itself
 	void print_pivot_info(); // debug info on table pivot columns
@@ -88,22 +80,6 @@ void Table::reset_pivot_information() {
 }
 
 void Table::initialise(int w, int h) {
-	/*int wminusonetimesh = (w-1)*h;
-	this->data = (double*)malloc(sizeof(double)*w*h);
-	this->w = w;
-	this->h = h;
-	
-	this->table_pivot_columns = (int*)malloc(sizeof(int)*h);
-	this->pivotable_columns = (unsigned char*)malloc(sizeof(unsigned char)*wminusonetimesh);
-	this->pivotable_rows = (unsigned char*)malloc(sizeof(unsigned char)*wminusonetimesh);
-	this->pivotable_ratios = (double*)malloc(sizeof(double)*wminusonetimesh);
-	this->table_pivot_column_mask = (Mask*)malloc(sizeof(Mask));
-	this->pivotable_columns_mask = (Mask*)malloc(sizeof(Mask));
-
-	this->reset_pivot_information();*/
-	this->initialise_and_wipe(w, h);
-}
-void Table::initialise_and_wipe(int w, int h) {
 	int wminusonetimesh = (w-1)*h;
 	this->data = (double*)calloc(sizeof(double),w*h);
 	this->w = w;
@@ -140,20 +116,6 @@ void Table::load(Table* t) {
 	memcpy ( this->pivotable_ratios, t->pivotable_ratios, sizeof(double)*wminusonetimesh );
 	this->need_to_recalculate_pivotable = t->need_to_recalculate_pivotable;
 }
-void Table::initialise_and_load(Table* t) {
-	this->initialise(t->w,t->h);
-	this->load(t);
-}
-void Table::resize_table(int w, int h) {
-	this->data = (double*)realloc(this->data, sizeof(double)*w*h);
-	this->table_pivot_columns = (int*)realloc(this->table_pivot_columns, sizeof(int)*h);
-	this->pivotable_columns = (unsigned char*)realloc(this->pivotable_columns,sizeof(unsigned char)*(w-1)*h);
-	this->pivotable_rows = (unsigned char*)realloc(this->pivotable_rows,sizeof(unsigned char)*(w-1)*h);
-	this->pivotable_ratios = (double*)realloc(this->pivotable_ratios,sizeof(double)*(w-1)*h);
-	this->w = w;
-	this->h = h;
-}
-
 
 inline double Table::get(int c, int r) {
 	return (this->data)[c+r*this->w];
@@ -263,7 +225,7 @@ void Table::calculate_pivots(bool negatives) {
 	Row_Memory* row_memory;
 	row_memory = (Row_Memory*)calloc(sizeof(Row_Memory),1);
 	row_memory->setup(MEMORY_INITIAL_SIZE);
-	for (unsigned char i=0;i<wminusone;i++) { // for each column
+	for (int i=0;i<wminusone;i++) { // for each column
 		if (this->table_pivot_column_mask->get_bit(i)==1) // scip if it is already table pivot column
 			continue;
 		row_memory->clear();
@@ -394,177 +356,3 @@ void Table::delete_column(int c, double* head) {
 	this->w -= 1;
 	need_to_recalculate_pivotable = true;
 }
-
-// for an applied head, can the set of players given by the anti-subset mask succeed in maximising the utility by themselves
-// this function returns 1 if positively 'yes', -1 if positively 'no', and 0 if undecidable on a one-pass check.
-// with 0, a more comprehensive check (which can handle degeneracy) should be performed.
-int Table::shallow_check_subset_improvable(Mask* anti_subset_mask, double* head, bool maximising) {
-	/*#if DEBUG==1
-		printf("SUBSET IMPROVABLE\n");
-		printf("anti_subset_mask: ");
-		anti_subset_mask->print();
-		printf("table pivotable_columns_mask: ");
-		this->pivotable_columns_mask->print();
-		printf("passed head:\n");
-		printhead(head,this->w);
-	#endif*/
-	//printf("shallow: initialise\n");
-	for (int i=0;i<this->w-1;i++) {
-		if (maximising==true) {
-			if (head[i]>=0)
-				continue;
-		} else {
-			if (head[i]<=0)
-				continue;
-		}
-		//if ((subset_mask->get_bit(i)==1)&&(this->pivotable_columns_mask->get_bit(i)==1)) {
-			//printf("shallow: checking %i\n",i);
-		if (anti_subset_mask->get_bit(i)==0) {
-			int j;
-			bool viable = false;
-			for (j=0;j<this->h;j++) {
-				//printf("shallow: checking row %i\n",i);
-				double v = this->get(i,j);
-				if (v>0) {
-					//printf("shallow: checked >0\n");
-					if (
-						(this->get(this->w-1,j)==0.0)||
-						( (this->table_pivot_columns[j]>=0)&&(anti_subset_mask->get_bit(this->table_pivot_columns[j])==1) )
-					) {
-						//printf("shallow: check break\n");
-						break;
-					}
-					viable=true;
-				}
-			}
-			if ((j==this->h) && (viable==true))
-				return 1;
-		}
-	}
-	return 0;
-}
-
-
-bool Table::check_subset_improvable(Mask* anti_subset_mask, double* head, bool maximising) {
-	if (this->table_pivot_column_number != this->h)
-		printf("WARNING: check subset improvable method on table without full pivot set.\n");
-	//printf("shallow check\n");
-	int shallow_check = this->shallow_check_subset_improvable(anti_subset_mask, head, maximising);
-	int max_int = maximising==true ? 1 : -1;
-	if (shallow_check==1) {//check if trivially improvable/unimprovable
-		#if DEBUG==1
-			printf("SUBSET IMPROVABLE %i, trivial true\n", max_int);
-		#endif
-		return true;
-	}
-	// otherwise perform more comprehensive check.
-
-	Table* t = (Table*)malloc(sizeof(Table)); // create dataspace for compacted table
-	t->initialise_and_load(this);
-	double* new_head = (double*)malloc(sizeof(double)*t->w);
-	memcpy(new_head, head, sizeof(double)*t->w);
-	
-	for (int j=0; j<t->h; j++) // wipe specific right hand side entries
-		if (table_pivot_columns[j]>=0)
-			if (anti_subset_mask->get_bit(table_pivot_columns[j])==1)
-				t->set(t->w-1,j,0.0);
-	for (int i=t->w-2;i>-1;i--) // cull anticoalition columns (TODO: inefficient)
-		if (anti_subset_mask->get_bit(i)==1)
-			t->delete_column(i,new_head);
-	t->calculate_pivots(false);
-	
-	Mask_Memory* masks;
-	masks = (Mask_Memory*)calloc(sizeof(Mask_Memory),1);
-	masks->setup(MEMORY_INITIAL_SIZE);
-	double best_improvement;
-	int best_improvement_index;
-	
-	//printhead(new_head,t->w);
-	//t->print();
-	//t->print_pivot_info();
-	//t->print_pivotable_info();
-	bool ret = t->simplex_improve(new_head, max_int, masks, &best_improvement, &best_improvement_index); // see if it is possible to simplex improve one step.
-
-	masks->destroy(); // free data
-	free(masks);
-	t->free_data();
-	free(t);
-	free(new_head);
-
-	#if DEBUG==1
-		if (ret==true) {
-			printf("SUBSET IMPROVABLE %i, non-trivial true\n", max_int);
-		} else {
-			printf("SUBSET IMPROVABLE %i, non-trivial false\n", max_int);
-		}
-	#endif
-	return ret;
-}
-
-void Table::reverse_engineer_pivots() {
-	this->reset_pivot_information();
-	for (int i=0; i<this->h; i++) {
-		for (int j=0; j<this->w; j++) {
-			if (this->get(j,i)==1.0) {
-				int k;
-				for (k=0; k<this->h; k++) {
-					if ((k!=i) && (this->get(j,k)!=0.0))
-						break;
-				}
-				if (k==this->h) {
-					this->table_pivot_columns[i]=j;
-					this->table_pivot_column_mask->set_bit(j,1);
-					this->table_pivot_column_number += 1;
-					break;
-				}
-			}
-		}
-	}
-}
-
-// assumes no duplicate constraints.
-// also, need to verify that it -allways- visits all degenerate pivot combinations.
-void Table::add_degenerate_pivot_masks(Mask_Memory* masks) {
-	if (this->need_to_recalculate_pivotable == true)
-		this->calculate_pivots(true);
-	Mask new_mask;
-	masks->add(this->table_pivot_column_mask, true);
-	bool discoveries = true;
-	while (discoveries == true) {
-		discoveries = false;
-		for (int i=0; i<this->pivotable_number; i++) {
-			if (this->pivotable_ratios[i]==0) {
-				new_mask.set(this->table_pivot_column_mask);
-				new_mask.flip_bit(this->pivotable_columns[i]);
-				if (this->pivotable_rows[i] != -1)
-					new_mask.flip_bit(this->table_pivot_columns[this->pivotable_rows[i]]);
-				if (masks->search(&new_mask)==false) {
-					discoveries = true;
-					masks->add(&new_mask, false);
-					this->pivot(this, i);
-					this->calculate_pivots(true);
-					break;
-				}
-			}
-		}
-	}
-}
-
-void Table::attempt_make_rational() {
-	if (this->need_to_recalculate_pivotable == true)
-		this->calculate_pivots(false);
-	for (int i=0; i<this->h; i++) {
-		if (this->table_pivot_columns[i] == -1) {
-			int j;
-			int pivot_number = this->pivotable_number;
-			for (j=0; j<pivot_number; j++) {
-				if (this->pivotable_rows[j]==i) {
-					this->pivot(this,j);
-					this->calculate_pivots(false);
-					break;
-				}
-			}
-		}
-	}
-}
-

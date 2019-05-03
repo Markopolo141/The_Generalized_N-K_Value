@@ -6,10 +6,11 @@ struct Row_iter {
 	int index;
 };
 
+
 struct Row_Memory {
 	Row_iter* memory;
-	int mem_size;
-	int length;
+	unsigned long mem_size;
+	unsigned long length;
 	
 	void add(double val,double right, int index);
 	void clear();

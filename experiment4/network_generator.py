@@ -4,8 +4,6 @@ from math import floor
 import pdb
 import click
 
-import click
-
 @click.command()
 @click.argument('n', type=int)
 @click.argument('k', type=int)

@@ -42,9 +42,11 @@ void free_memory() {
 
 void setup_memory(Table* t) {
 	prev_max_table = (Table*)malloc(sizeof(Table));
-	prev_max_table->initialise_and_load(t);
+	prev_max_table->initialise(t->w,t->h);
+	prev_max_table->load(t);
 	prev_min_table = (Table*)malloc(sizeof(Table));
-	prev_min_table->initialise_and_load(t);
+	prev_min_table->initialise(t->w,t->h);
+	prev_min_table->load(t);
 	master_head = (double*)calloc(sizeof(double),t->w+1);
 	temporary_head = (double*)calloc(sizeof(double),t->w+1);
 }

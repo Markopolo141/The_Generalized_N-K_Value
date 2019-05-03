@@ -94,7 +94,6 @@ static PyObject* setup_solver(PyObject* self, PyObject* args) {
 	#if DEBUG==1
 		printf("Setup Solver routine complete\n\n");
 	#endif
-
 	return PyFloat_FromDouble(1);
 }
 
@@ -120,7 +119,7 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	obj = PyTuple_GetItem(args,0);
 	if (PyNumber_Check(obj) != 1)
 		return python_error("Non-numeric argument.");
-	coalition.A = PyLong_AsUnsignedLong(PyNumber_Long(obj));
+	coalition.A0 = PyLong_AsUnsignedLong(PyNumber_Long(obj));
 	if (PyErr_Occurred()!= NULL)
 		return python_error("Non-numeric argument...");
 	if (((~player_mask)&coalition).non_zero())

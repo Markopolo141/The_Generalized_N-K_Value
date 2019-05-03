@@ -68,7 +68,7 @@ Table* analyse_pyobject_tables(
 
 	Table* t; // construct the table to appropriate size
 	t = (Table*)malloc(sizeof(Table));
-	t->initialise_and_wipe(ww, h);
+	t->initialise(ww, h);
 	
 	PyObject *row;
 	int r = 0;
@@ -141,7 +141,7 @@ Table* analyse_pyobject_table(PyObject *array) {
 	}
 	Table* t; // construct the table to appropriate size
 	t = (Table*)malloc(sizeof(Table));
-	t->initialise_and_wipe(w, h);
+	t->initialise(w, h);
 	
 	PyObject *row;
 	double v;
