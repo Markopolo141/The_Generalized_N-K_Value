@@ -112,7 +112,7 @@ def calc_maxmin_minmax(i):
 	if (maxmin_minmax_call_count%9==0):
 		#bilevel_solver.spruik()
 		pass
-	return bilevel_solver.solve(i)
+	return bilevel_solver.solve([i])
 
 
 def spruik_solver():

@@ -34,7 +34,9 @@ def gen_mask(n, f):
 	f.write('\tinline void set_ones(unsigned int ones) {{\n\t\tthis->set_zero();\n\t\tif ((ones>sizeof(unsigned long)*8*{})||(ones<0)) {{\n\t\t\tprintf("ERROR: mask bit overflow\\n"); return;\n\t\t}}\n\t\t'.format(n))
 	f.write('if (ones==sizeof(unsigned long)*8*{}) {{\n\t\t\t{}\n\t\t\treturn;\n\t\t}}\n\t\t'.format(n,"\n\t\t\t".join(["A{} = ~((unsigned long)0);".format(i) for i in range(n-1,-1,-1)]),n))
 	f.write("\n\t\t".join(["if (ones>=sizeof(unsigned long)*8*{}) {{\n\t\t\t{}\n\t\t\t{}\n\t\t\treturn;\n\t\t}}".format(i,"A{} = ((((unsigned long)1)<<(ones-sizeof(unsigned long)*8*{}))-1);".format(i,i),"\n\t\t\t".join(["A{} = ~((unsigned long)0);".format(ii) for ii in range(i-1,-1,-1)])) for i in range(n-1,-1,-1)]))
-	f.write("\n\t}\n};\n")
+	f.write("\n\t}\n")
+	f.write("\tvoid set_long(int i, unsigned long l) {{\n\t\t{}\n\t\t{}\n\t}}\n".format(warning_string.format("i*(sizeof(unsigned long)*8)"),"\n\t\t".join(["if (i=={}) {{ A{}=l; }}".format(i,i) for i in range(n)])))
+	f.write("};\n")
 	f.close()
 
 if __name__ == '__main__':
