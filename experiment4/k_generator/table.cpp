@@ -193,19 +193,80 @@ double Table::simplex(double* head, bool maximising) {
 	free(masks);
 	return head[this->w-1];
 }
+/*double Table::simplex(double* head, bool maximising) {
+	//if (this->table_pivot_column_number != this->h)
+	//	printf("WARNING: simplex method on potentially badly formed table.\n");
+
+	int max_int = maximising==true ? 1 : -1;
+	this->calculate_pivots(false);
+	this->apply_to_head(head,head);
+	Mask_Memory* masks;
+	masks = (Mask_Memory*)calloc(sizeof(Mask_Memory),1);
+	masks->setup(MEMORY_INITIAL_SIZE);
+	double best_improvement;
+	int best_improvement_index;
+	Mask new_mask;
+
+	masks->add(this->table_pivot_column_mask, false);
+	while (true) {
+		best_improvement=0;
+		best_improvement_index = -1;
+		int smallest_out_column = -1;
+		for (int pivot_index=0; pivot_index < this->pivotable_number; pivot_index++) {
+			double head_value = head[this->pivotable_columns[pivot_index]];
+			if (head_value*max_int < 0) {
+				double ratio = -max_int*head_value*this->pivotable_ratios[pivot_index];
+				if (ratio>best_improvement) {
+					best_improvement = ratio;
+					best_improvement_index = pivot_index;
+				} //else if ((ratio==0) && (best_improvement==0)) { //bland's rule
+					//if (smallest_out_column == -1) {
+					//	smallest_out_column = this->table_pivot_columns[pivotable_rows[pivot_index]];
+				//		best_improvement_index = pivot_index;
+					//} else {
+					//	if (this->table_pivot_columns[pivotable_rows[pivot_index]] < smallest_out_column) {
+					//		smallest_out_column = this->table_pivot_columns[pivotable_rows[pivot_index]];
+					//		best_improvement_index = pivot_index;
+					//	}
+					//}
+				//}
+			}
+		}
+		if (best_improvement_index==-1) // destinct optima attained
+			break;
+		new_mask.set(this->table_pivot_column_mask);
+		new_mask.flip_bit(this->pivotable_columns[best_improvement_index]);
+		if (this->pivotable_rows[best_improvement_index] != -1)
+			new_mask.flip_bit(this->table_pivot_columns[this->pivotable_rows[best_improvement_index]]);
+		if (masks->search(&new_mask)==true) // if degenerate cycling is occuring in context of bland's rule
+			break;
+		this->pivot(this, best_improvement_index);
+		this->calculate_pivots(false);
+		this->apply_to_head(head,head);
+		masks->add(this->table_pivot_column_mask, false);
+	}
+	masks->destroy();
+	free(masks);
+	return head[this->w-1];
+}*/
+
+
+
 
 
 // given a head, apply all pivot column information to it
 void Table::apply_to_head(double* head, double* new_head) {
 	int h = this->h;
 	int w = this->w;
+	bool first_set = true;
 	for (int j=0;j<h;j++) {
 		int pivot_column = this->table_pivot_columns[j];
 		if (pivot_column != -1) {
 			double head_pivot_column = head[pivot_column];
-			if (j==0) {
+			if (first_set==true) {
 				for (int i=0;i<w;i++)
 					new_head[i] = head[i] - head_pivot_column*(this->get(i,j));
+				first_set=false;
 			} else {
 				for (int i=0;i<w;i++)
 					new_head[i] = new_head[i] - head_pivot_column*(this->get(i,j));
@@ -263,6 +324,37 @@ void Table::calculate_pivots(bool negatives) {
 	free(row_memory);
 	this->need_to_recalculate_pivotable = false;
 }
+/*void Table::calculate_pivots(bool negatives) {
+	this->pivotable_columns_mask->set_zero();
+	this->pivotable_number = 0;
+	for (int i=0;i<this->w-1;i++) { // for each column
+		if (this->table_pivot_column_mask->get_bit(i)==1) // scip if it is already table pivot column
+			continue;
+		double best_ratio = DBL_MAX;
+		double best_index = -1;
+		for (int j=0;j<this->h;j++) {
+			double v = this->get(i,j);
+			double right_value = this->get(this->w-1,j);
+			if (v>0) {
+				double ratio = right_value/v;
+				if (ratio<best_ratio) {
+					best_ratio = ratio;
+					best_index = j;
+				}
+			}
+		}
+		if (best_index != -1) {
+			this->pivotable_columns[this->pivotable_number] = i;
+			this->pivotable_rows[this->pivotable_number] = best_index;
+			this->pivotable_ratios[this->pivotable_number]=best_ratio;
+			this->pivotable_columns_mask->set_bit(i,1);
+			this->pivotable_number += 1;
+		}
+	}
+	this->need_to_recalculate_pivotable = false;
+}*/
+
+
 
 // set this table to be as pivoted from another table by the indexed pivotable point
 void Table::pivot(Table* t, int pivotable_index) {
@@ -356,3 +448,29 @@ void Table::delete_column(int c, double* head) {
 	this->w -= 1;
 	need_to_recalculate_pivotable = true;
 }
+
+/*void Table::delete_column(int c, double* head) {
+	for (int i=0; i<this->h; i++) {
+		if (this->table_pivot_columns[i]==c) {
+			this->table_pivot_column_number -= 1;
+			this->table_pivot_columns[i] = -1;
+		}
+		if (this->table_pivot_columns[i]>c)
+			this->table_pivot_columns[i] -= 1;
+	}
+	this->table_pivot_column_mask->remove_bit(c);
+	if (head != NULL)
+		for (int i=0; i<this->w; i++)
+			if (i>c)
+				head[i-1]=head[i];
+	this->w -= 1;
+	for (int j=0; j<this->h; j++)
+		for (int i=0; i<this->w; i++)
+			if (i>=c) {
+				this->set(i,j, (this->data)[i+1+j*(this->w+1)]);
+			} else {
+				this->set(i,j, (this->data)[i+j*(this->w+1)]);
+			}
+	need_to_recalculate_pivotable = true;
+}*/
+
