@@ -8,9 +8,6 @@ import json
 
 
 
-
-
-
 def float_gcd(doubles, pseudo_zero, inverting=True):
 	if inverting:
 		invert = 1.0 if doubles[0]>=0 else -1.0
@@ -105,14 +102,24 @@ def setup(ppc):
 			eq_constraints[i] = [-ee for ee in eq_constraints[i]] 
 	bilevel_solver.setup_solver(le_constraints,eq_constraints,[],costs)
 
-maxmin_minmax_call_count = 0
+
+mask64 = sum([1<<aa for aa in range(64)])
+def break_down(a):
+	A = []
+	while a>>64!=0:
+		A.append(a&mask64)
+		a>>=64
+	A.append(a)
+	return A
+
+#maxmin_minmax_call_count = 0
 def calc_maxmin_minmax(i):
-	global maxmin_minmax_call_count
-	maxmin_minmax_call_count += 1
-	if (maxmin_minmax_call_count%9==0):
-		#bilevel_solver.spruik()
-		pass
-	return bilevel_solver.solve([i])
+	#global maxmin_minmax_call_count
+	#maxmin_minmax_call_count += 1
+	#if (maxmin_minmax_call_count%9==0):
+	#	bilevel_solver.spruik()
+	#	pass
+	return bilevel_solver.solve(break_down(i))
 
 
 def spruik_solver():
