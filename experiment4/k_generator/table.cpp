@@ -8,8 +8,8 @@ struct Table {
 	Mask* table_pivot_column_mask; //the binary mask of the pivot columns
 	int table_pivot_column_number; // the number of columns that are established pivot columns of the table. 
 	
-	unsigned char* pivotable_columns; //the columns of potential pivot points, not ordered and not nessisarily unique
-	unsigned char* pivotable_rows; // the respective rows of potential pivot points, not ordered and not nessisarily unique
+	unsigned int* pivotable_columns; //the columns of potential pivot points, not ordered and not nessisarily unique
+	unsigned int* pivotable_rows; // the respective rows of potential pivot points, not ordered and not nessisarily unique
 	double* pivotable_ratios; // the per-unit improvement of pivoting from the respective pivot point
 	Mask* pivotable_columns_mask; // the binary mask of pivotable columns
 	int pivotable_number; // the number potential pivot points.
@@ -86,8 +86,8 @@ void Table::initialise(int w, int h) {
 	this->h = h;
 	
 	this->table_pivot_columns = (int*)malloc(sizeof(int)*h);
-	this->pivotable_columns = (unsigned char*)calloc(sizeof(unsigned char),wminusonetimesh);
-	this->pivotable_rows = (unsigned char*)calloc(sizeof(unsigned char),wminusonetimesh);
+	this->pivotable_columns = (unsigned int*)calloc(sizeof(unsigned int),wminusonetimesh);
+	this->pivotable_rows = (unsigned int*)calloc(sizeof(unsigned int),wminusonetimesh);
 	this->pivotable_ratios = (double*)calloc(sizeof(double),wminusonetimesh);
 	this->table_pivot_column_mask = (Mask*)calloc(sizeof(Mask),1);
 	this->pivotable_columns_mask = (Mask*)calloc(sizeof(Mask),1);
@@ -111,8 +111,8 @@ void Table::load(Table* t) {
 	this->pivotable_number = t->pivotable_number;
 	memcpy ( this->data, t->data, sizeof(double)*(this->h)*(this->w) );
 	memcpy ( this->table_pivot_columns, t->table_pivot_columns, sizeof(int)*(this->h) );
-	memcpy ( this->pivotable_columns, t->pivotable_columns, sizeof(unsigned char)*wminusonetimesh );
-	memcpy ( this->pivotable_rows, t->pivotable_rows, sizeof(unsigned char)*wminusonetimesh );
+	memcpy ( this->pivotable_columns, t->pivotable_columns, sizeof(unsigned int)*wminusonetimesh );
+	memcpy ( this->pivotable_rows, t->pivotable_rows, sizeof(unsigned int)*wminusonetimesh );
 	memcpy ( this->pivotable_ratios, t->pivotable_ratios, sizeof(double)*wminusonetimesh );
 	this->need_to_recalculate_pivotable = t->need_to_recalculate_pivotable;
 }
@@ -309,7 +309,7 @@ void Table::calculate_pivots(bool negatives) {
 				this->pivotable_number += 1;
 			}
 		}
-		for (unsigned char z=0; z<row_memory->length; z++) {// if there is a best row add the info to the datastructure
+		for (unsigned int z=0; z<row_memory->length; z++) {// if there is a best row add the info to the datastructure
 			Row_iter* r = &(row_memory->memory[z]);
 			if ((r->right) - best_ratio*(r->val) < TINY) {
 				this->pivotable_columns[this->pivotable_number] = i;

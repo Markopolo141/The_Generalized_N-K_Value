@@ -18,13 +18,18 @@ class Mask {
 	unsigned long A2;
 	unsigned long A3;
 	unsigned long A4;
-	static const unsigned long length = sizeof(unsigned long)*8*5;
+	unsigned long A5;
+	unsigned long A6;
+	unsigned long A7;
+	unsigned long A8;
+	unsigned long A9;
+	static const unsigned long length = sizeof(unsigned long)*8*10;
 
 	void print() {
 		for (unsigned long i=0; i<this->length; i++) { printf("%i",this->get_bit(i)); } printf("\n");
 	}
 	inline bool operator==(const Mask& m) {
-		if((m.A0 == this->A0) && (m.A1 == this->A1) && (m.A2 == this->A2) && (m.A3 == this->A3) && (m.A4 == this->A4))
+		if((m.A0 == this->A0) && (m.A1 == this->A1) && (m.A2 == this->A2) && (m.A3 == this->A3) && (m.A4 == this->A4) && (m.A5 == this->A5) && (m.A6 == this->A6) && (m.A7 == this->A7) && (m.A8 == this->A8) && (m.A9 == this->A9))
 			return true;
 		return false;
 	}
@@ -35,6 +40,11 @@ class Mask {
 		m2.A2 = (this->A2)&(m.A2);
 		m2.A3 = (this->A3)&(m.A3);
 		m2.A4 = (this->A4)&(m.A4);
+		m2.A5 = (this->A5)&(m.A5);
+		m2.A6 = (this->A6)&(m.A6);
+		m2.A7 = (this->A7)&(m.A7);
+		m2.A8 = (this->A8)&(m.A8);
+		m2.A9 = (this->A9)&(m.A9);
 		return m2;
 	}
 	inline Mask operator~() {
@@ -44,6 +54,11 @@ class Mask {
 		m2.A2 = ~(this->A2);
 		m2.A3 = ~(this->A3);
 		m2.A4 = ~(this->A4);
+		m2.A5 = ~(this->A5);
+		m2.A6 = ~(this->A6);
+		m2.A7 = ~(this->A7);
+		m2.A8 = ~(this->A8);
+		m2.A9 = ~(this->A9);
 		return m2;
 	}
 	inline Mask operator^(const Mask& m) {
@@ -53,6 +68,11 @@ class Mask {
 		m2.A2 = (this->A2)^(m.A2);
 		m2.A3 = (this->A3)^(m.A3);
 		m2.A4 = (this->A4)^(m.A4);
+		m2.A5 = (this->A5)^(m.A5);
+		m2.A6 = (this->A6)^(m.A6);
+		m2.A7 = (this->A7)^(m.A7);
+		m2.A8 = (this->A8)^(m.A8);
+		m2.A9 = (this->A9)^(m.A9);
 		return m2;
 	}
 	inline Mask operator|(const Mask& m) {
@@ -62,6 +82,11 @@ class Mask {
 		m2.A2 = (this->A2)|(m.A2);
 		m2.A3 = (this->A3)|(m.A3);
 		m2.A4 = (this->A4)|(m.A4);
+		m2.A5 = (this->A5)|(m.A5);
+		m2.A6 = (this->A6)|(m.A6);
+		m2.A7 = (this->A7)|(m.A7);
+		m2.A8 = (this->A8)|(m.A8);
+		m2.A9 = (this->A9)|(m.A9);
 		return m2;
 	}
 	inline void set_zero() {
@@ -70,6 +95,11 @@ class Mask {
 		this->A2 = 0;
 		this->A3 = 0;
 		this->A4 = 0;
+		this->A5 = 0;
+		this->A6 = 0;
+		this->A7 = 0;
+		this->A8 = 0;
+		this->A9 = 0;
 	}
 	inline void operator=(Mask* m) {
 		this->A0 = m->A0;
@@ -77,6 +107,11 @@ class Mask {
 		this->A2 = m->A2;
 		this->A3 = m->A3;
 		this->A4 = m->A4;
+		this->A5 = m->A5;
+		this->A6 = m->A6;
+		this->A7 = m->A7;
+		this->A8 = m->A8;
+		this->A9 = m->A9;
 	}
 	inline void set(Mask* m) {
 		this->A0 = m->A0;
@@ -84,6 +119,11 @@ class Mask {
 		this->A2 = m->A2;
 		this->A3 = m->A3;
 		this->A4 = m->A4;
+		this->A5 = m->A5;
+		this->A6 = m->A6;
+		this->A7 = m->A7;
+		this->A8 = m->A8;
+		this->A9 = m->A9;
 	}
 	inline void set(Mask m) {
 		this->A0 = m.A0;
@@ -91,10 +131,30 @@ class Mask {
 		this->A2 = m.A2;
 		this->A3 = m.A3;
 		this->A4 = m.A4;
+		this->A5 = m.A5;
+		this->A6 = m.A6;
+		this->A7 = m.A7;
+		this->A8 = m.A8;
+		this->A9 = m.A9;
 	}
 	inline void flip_bit(unsigned int bit) {
-		if ((bit>=sizeof(unsigned long)*8*5) || (bit<0)) {
+		if ((bit>=sizeof(unsigned long)*8*10) || (bit<0)) {
 			 printf("ERROR: mask bit overflow\n");
+		}
+		if (bit>=sizeof(unsigned long)*8*9) {
+			this->A9 ^= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*9); return;
+		}
+		if (bit>=sizeof(unsigned long)*8*8) {
+			this->A8 ^= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*8); return;
+		}
+		if (bit>=sizeof(unsigned long)*8*7) {
+			this->A7 ^= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*7); return;
+		}
+		if (bit>=sizeof(unsigned long)*8*6) {
+			this->A6 ^= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*6); return;
+		}
+		if (bit>=sizeof(unsigned long)*8*5) {
+			this->A5 ^= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*5); return;
 		}
 		if (bit>=sizeof(unsigned long)*8*4) {
 			this->A4 ^= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*4); return;
@@ -119,11 +179,31 @@ class Mask {
 		a += count_the_bits(this->A2);
 		a += count_the_bits(this->A3);
 		a += count_the_bits(this->A4);
+		a += count_the_bits(this->A5);
+		a += count_the_bits(this->A6);
+		a += count_the_bits(this->A7);
+		a += count_the_bits(this->A8);
+		a += count_the_bits(this->A9);
 		return a;
 	}
 	inline unsigned int get_bit(unsigned int bit) {
-		if ((bit>=sizeof(unsigned long)*8*5) || (bit<0)) {
+		if ((bit>=sizeof(unsigned long)*8*10) || (bit<0)) {
 			 printf("ERROR: mask bit overflow\n");
+		}
+		if (bit>=sizeof(unsigned long)*8*9) {
+			return (A9 & ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*9))!=0;
+		}
+		if (bit>=sizeof(unsigned long)*8*8) {
+			return (A8 & ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*8))!=0;
+		}
+		if (bit>=sizeof(unsigned long)*8*7) {
+			return (A7 & ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*7))!=0;
+		}
+		if (bit>=sizeof(unsigned long)*8*6) {
+			return (A6 & ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*6))!=0;
+		}
+		if (bit>=sizeof(unsigned long)*8*5) {
+			return (A5 & ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*5))!=0;
 		}
 		if (bit>=sizeof(unsigned long)*8*4) {
 			return (A4 & ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*4))!=0;
@@ -142,16 +222,26 @@ class Mask {
 		}
 	}
 	inline void set_bit(unsigned int bit, unsigned int value) {
-		if ((bit>=sizeof(unsigned long)*8*5) || (bit<0)) {
+		if ((bit>=sizeof(unsigned long)*8*10) || (bit<0)) {
 			 printf("ERROR: mask bit overflow\n");
 		}
 		if (value==1) {
+			if (bit>=sizeof(unsigned long)*8*9) {A9 |= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*9);return;}
+			if (bit>=sizeof(unsigned long)*8*8) {A8 |= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*8);return;}
+			if (bit>=sizeof(unsigned long)*8*7) {A7 |= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*7);return;}
+			if (bit>=sizeof(unsigned long)*8*6) {A6 |= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*6);return;}
+			if (bit>=sizeof(unsigned long)*8*5) {A5 |= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*5);return;}
 			if (bit>=sizeof(unsigned long)*8*4) {A4 |= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*4);return;}
 			if (bit>=sizeof(unsigned long)*8*3) {A3 |= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*3);return;}
 			if (bit>=sizeof(unsigned long)*8*2) {A2 |= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*2);return;}
 			if (bit>=sizeof(unsigned long)*8*1) {A1 |= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*1);return;}
 			if (bit>=sizeof(unsigned long)*8*0) {A0 |= ((unsigned long)1)<<(bit-sizeof(unsigned long)*8*0);return;}
 		} else {
+			if (bit>=sizeof(unsigned long)*8*9) {A9 &= ~(((unsigned long)1)<<(bit-sizeof(unsigned long)*8*9));return;}
+			if (bit>=sizeof(unsigned long)*8*8) {A8 &= ~(((unsigned long)1)<<(bit-sizeof(unsigned long)*8*8));return;}
+			if (bit>=sizeof(unsigned long)*8*7) {A7 &= ~(((unsigned long)1)<<(bit-sizeof(unsigned long)*8*7));return;}
+			if (bit>=sizeof(unsigned long)*8*6) {A6 &= ~(((unsigned long)1)<<(bit-sizeof(unsigned long)*8*6));return;}
+			if (bit>=sizeof(unsigned long)*8*5) {A5 &= ~(((unsigned long)1)<<(bit-sizeof(unsigned long)*8*5));return;}
 			if (bit>=sizeof(unsigned long)*8*4) {A4 &= ~(((unsigned long)1)<<(bit-sizeof(unsigned long)*8*4));return;}
 			if (bit>=sizeof(unsigned long)*8*3) {A3 &= ~(((unsigned long)1)<<(bit-sizeof(unsigned long)*8*3));return;}
 			if (bit>=sizeof(unsigned long)*8*2) {A2 &= ~(((unsigned long)1)<<(bit-sizeof(unsigned long)*8*2));return;}
@@ -160,17 +250,67 @@ class Mask {
 		}
 	}
 	inline void remove_bit(unsigned int bit) {
-		if ((bit>=sizeof(unsigned long)*8*5) || (bit<0)) {
+		if ((bit>=sizeof(unsigned long)*8*10) || (bit<0)) {
 			 printf("ERROR: mask bit overflow\n");
 		}
 		unsigned long t1;
 		unsigned long t2;
+		if (bit>=sizeof(unsigned long)*8*9) {
+			bit -= sizeof(unsigned long)*8*9;
+			t1 = (A9>>bit)<<bit;
+			t2 = (A9>>(bit+1))<<(bit);
+			A9 = (A9^t1)|t2;
+			
+			return;
+		}
+		if (bit>=sizeof(unsigned long)*8*8) {
+			bit -= sizeof(unsigned long)*8*8;
+			t1 = (A8>>bit)<<bit;
+			t2 = (A8>>(bit+1))<<(bit);
+			A8 = (A8^t1)|t2;
+			A8 |= ((A9&1)<<(sizeof(unsigned long)*8-1)); A9 >>= 1;
+			return;
+		}
+		if (bit>=sizeof(unsigned long)*8*7) {
+			bit -= sizeof(unsigned long)*8*7;
+			t1 = (A7>>bit)<<bit;
+			t2 = (A7>>(bit+1))<<(bit);
+			A7 = (A7^t1)|t2;
+			A7 |= ((A8&1)<<(sizeof(unsigned long)*8-1)); A8 >>= 1;
+			A8 |= ((A9&1)<<(sizeof(unsigned long)*8-1)); A9 >>= 1;
+			return;
+		}
+		if (bit>=sizeof(unsigned long)*8*6) {
+			bit -= sizeof(unsigned long)*8*6;
+			t1 = (A6>>bit)<<bit;
+			t2 = (A6>>(bit+1))<<(bit);
+			A6 = (A6^t1)|t2;
+			A6 |= ((A7&1)<<(sizeof(unsigned long)*8-1)); A7 >>= 1;
+			A7 |= ((A8&1)<<(sizeof(unsigned long)*8-1)); A8 >>= 1;
+			A8 |= ((A9&1)<<(sizeof(unsigned long)*8-1)); A9 >>= 1;
+			return;
+		}
+		if (bit>=sizeof(unsigned long)*8*5) {
+			bit -= sizeof(unsigned long)*8*5;
+			t1 = (A5>>bit)<<bit;
+			t2 = (A5>>(bit+1))<<(bit);
+			A5 = (A5^t1)|t2;
+			A5 |= ((A6&1)<<(sizeof(unsigned long)*8-1)); A6 >>= 1;
+			A6 |= ((A7&1)<<(sizeof(unsigned long)*8-1)); A7 >>= 1;
+			A7 |= ((A8&1)<<(sizeof(unsigned long)*8-1)); A8 >>= 1;
+			A8 |= ((A9&1)<<(sizeof(unsigned long)*8-1)); A9 >>= 1;
+			return;
+		}
 		if (bit>=sizeof(unsigned long)*8*4) {
 			bit -= sizeof(unsigned long)*8*4;
 			t1 = (A4>>bit)<<bit;
 			t2 = (A4>>(bit+1))<<(bit);
 			A4 = (A4^t1)|t2;
-			
+			A4 |= ((A5&1)<<(sizeof(unsigned long)*8-1)); A5 >>= 1;
+			A5 |= ((A6&1)<<(sizeof(unsigned long)*8-1)); A6 >>= 1;
+			A6 |= ((A7&1)<<(sizeof(unsigned long)*8-1)); A7 >>= 1;
+			A7 |= ((A8&1)<<(sizeof(unsigned long)*8-1)); A8 >>= 1;
+			A8 |= ((A9&1)<<(sizeof(unsigned long)*8-1)); A9 >>= 1;
 			return;
 		}
 		if (bit>=sizeof(unsigned long)*8*3) {
@@ -179,6 +319,11 @@ class Mask {
 			t2 = (A3>>(bit+1))<<(bit);
 			A3 = (A3^t1)|t2;
 			A3 |= ((A4&1)<<(sizeof(unsigned long)*8-1)); A4 >>= 1;
+			A4 |= ((A5&1)<<(sizeof(unsigned long)*8-1)); A5 >>= 1;
+			A5 |= ((A6&1)<<(sizeof(unsigned long)*8-1)); A6 >>= 1;
+			A6 |= ((A7&1)<<(sizeof(unsigned long)*8-1)); A7 >>= 1;
+			A7 |= ((A8&1)<<(sizeof(unsigned long)*8-1)); A8 >>= 1;
+			A8 |= ((A9&1)<<(sizeof(unsigned long)*8-1)); A9 >>= 1;
 			return;
 		}
 		if (bit>=sizeof(unsigned long)*8*2) {
@@ -188,6 +333,11 @@ class Mask {
 			A2 = (A2^t1)|t2;
 			A2 |= ((A3&1)<<(sizeof(unsigned long)*8-1)); A3 >>= 1;
 			A3 |= ((A4&1)<<(sizeof(unsigned long)*8-1)); A4 >>= 1;
+			A4 |= ((A5&1)<<(sizeof(unsigned long)*8-1)); A5 >>= 1;
+			A5 |= ((A6&1)<<(sizeof(unsigned long)*8-1)); A6 >>= 1;
+			A6 |= ((A7&1)<<(sizeof(unsigned long)*8-1)); A7 >>= 1;
+			A7 |= ((A8&1)<<(sizeof(unsigned long)*8-1)); A8 >>= 1;
+			A8 |= ((A9&1)<<(sizeof(unsigned long)*8-1)); A9 >>= 1;
 			return;
 		}
 		if (bit>=sizeof(unsigned long)*8*1) {
@@ -198,6 +348,11 @@ class Mask {
 			A1 |= ((A2&1)<<(sizeof(unsigned long)*8-1)); A2 >>= 1;
 			A2 |= ((A3&1)<<(sizeof(unsigned long)*8-1)); A3 >>= 1;
 			A3 |= ((A4&1)<<(sizeof(unsigned long)*8-1)); A4 >>= 1;
+			A4 |= ((A5&1)<<(sizeof(unsigned long)*8-1)); A5 >>= 1;
+			A5 |= ((A6&1)<<(sizeof(unsigned long)*8-1)); A6 >>= 1;
+			A6 |= ((A7&1)<<(sizeof(unsigned long)*8-1)); A7 >>= 1;
+			A7 |= ((A8&1)<<(sizeof(unsigned long)*8-1)); A8 >>= 1;
+			A8 |= ((A9&1)<<(sizeof(unsigned long)*8-1)); A9 >>= 1;
 			return;
 		}
 		if (bit>=sizeof(unsigned long)*8*0) {
@@ -209,20 +364,85 @@ class Mask {
 			A1 |= ((A2&1)<<(sizeof(unsigned long)*8-1)); A2 >>= 1;
 			A2 |= ((A3&1)<<(sizeof(unsigned long)*8-1)); A3 >>= 1;
 			A3 |= ((A4&1)<<(sizeof(unsigned long)*8-1)); A4 >>= 1;
+			A4 |= ((A5&1)<<(sizeof(unsigned long)*8-1)); A5 >>= 1;
+			A5 |= ((A6&1)<<(sizeof(unsigned long)*8-1)); A6 >>= 1;
+			A6 |= ((A7&1)<<(sizeof(unsigned long)*8-1)); A7 >>= 1;
+			A7 |= ((A8&1)<<(sizeof(unsigned long)*8-1)); A8 >>= 1;
+			A8 |= ((A9&1)<<(sizeof(unsigned long)*8-1)); A9 >>= 1;
 			return;
 		}
 	}
 	inline bool non_zero() {
-		if (((this->A0)|(this->A1)|(this->A2)|(this->A3)|(this->A4))==0)
+		if (((this->A0)|(this->A1)|(this->A2)|(this->A3)|(this->A4)|(this->A5)|(this->A6)|(this->A7)|(this->A8)|(this->A9))==0)
 			return false;
 		return true;
 	}
 	inline void set_ones(unsigned int ones) {
 		this->set_zero();
-		if ((ones>sizeof(unsigned long)*8*5)||(ones<0)) {
+		if ((ones>sizeof(unsigned long)*8*10)||(ones<0)) {
 			printf("ERROR: mask bit overflow\n"); return;
 		}
-		if (ones==sizeof(unsigned long)*8*5) {
+		if (ones==sizeof(unsigned long)*8*10) {
+			A9 = ~((unsigned long)0);
+			A8 = ~((unsigned long)0);
+			A7 = ~((unsigned long)0);
+			A6 = ~((unsigned long)0);
+			A5 = ~((unsigned long)0);
+			A4 = ~((unsigned long)0);
+			A3 = ~((unsigned long)0);
+			A2 = ~((unsigned long)0);
+			A1 = ~((unsigned long)0);
+			A0 = ~((unsigned long)0);
+			return;
+		}
+		if (ones>=sizeof(unsigned long)*8*9) {
+			A9 = ((((unsigned long)1)<<(ones-sizeof(unsigned long)*8*9))-1);
+			A8 = ~((unsigned long)0);
+			A7 = ~((unsigned long)0);
+			A6 = ~((unsigned long)0);
+			A5 = ~((unsigned long)0);
+			A4 = ~((unsigned long)0);
+			A3 = ~((unsigned long)0);
+			A2 = ~((unsigned long)0);
+			A1 = ~((unsigned long)0);
+			A0 = ~((unsigned long)0);
+			return;
+		}
+		if (ones>=sizeof(unsigned long)*8*8) {
+			A8 = ((((unsigned long)1)<<(ones-sizeof(unsigned long)*8*8))-1);
+			A7 = ~((unsigned long)0);
+			A6 = ~((unsigned long)0);
+			A5 = ~((unsigned long)0);
+			A4 = ~((unsigned long)0);
+			A3 = ~((unsigned long)0);
+			A2 = ~((unsigned long)0);
+			A1 = ~((unsigned long)0);
+			A0 = ~((unsigned long)0);
+			return;
+		}
+		if (ones>=sizeof(unsigned long)*8*7) {
+			A7 = ((((unsigned long)1)<<(ones-sizeof(unsigned long)*8*7))-1);
+			A6 = ~((unsigned long)0);
+			A5 = ~((unsigned long)0);
+			A4 = ~((unsigned long)0);
+			A3 = ~((unsigned long)0);
+			A2 = ~((unsigned long)0);
+			A1 = ~((unsigned long)0);
+			A0 = ~((unsigned long)0);
+			return;
+		}
+		if (ones>=sizeof(unsigned long)*8*6) {
+			A6 = ((((unsigned long)1)<<(ones-sizeof(unsigned long)*8*6))-1);
+			A5 = ~((unsigned long)0);
+			A4 = ~((unsigned long)0);
+			A3 = ~((unsigned long)0);
+			A2 = ~((unsigned long)0);
+			A1 = ~((unsigned long)0);
+			A0 = ~((unsigned long)0);
+			return;
+		}
+		if (ones>=sizeof(unsigned long)*8*5) {
+			A5 = ((((unsigned long)1)<<(ones-sizeof(unsigned long)*8*5))-1);
 			A4 = ~((unsigned long)0);
 			A3 = ~((unsigned long)0);
 			A2 = ~((unsigned long)0);
@@ -263,7 +483,7 @@ class Mask {
 		}
 	}
 	void set_long(int i, unsigned long l) {
-		if ((i*(sizeof(unsigned long)*8)>=sizeof(unsigned long)*8*5) || (i*(sizeof(unsigned long)*8)<0)) {
+		if ((i*(sizeof(unsigned long)*8)>=sizeof(unsigned long)*8*10) || (i*(sizeof(unsigned long)*8)<0)) {
 			 printf("ERROR: mask bit overflow\n");
 		}
 		if (i==0) { A0=l; }
@@ -271,6 +491,10 @@ class Mask {
 		if (i==2) { A2=l; }
 		if (i==3) { A3=l; }
 		if (i==4) { A4=l; }
+		if (i==5) { A5=l; }
+		if (i==6) { A6=l; }
+		if (i==7) { A7=l; }
+		if (i==8) { A8=l; }
+		if (i==9) { A9=l; }
 	}
 };
-

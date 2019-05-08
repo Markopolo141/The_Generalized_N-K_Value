@@ -23,7 +23,7 @@ def v(s):
 
 
 def worker(number,data,ppc):
-	m = 1#100
+	m = 20
 	setup(ppc)
 	temp_data = [[0 for i in range(N)] for i in range(N)]
 	mm = [[0.0 for i in range(N)] for ii in range(N)]
@@ -78,7 +78,7 @@ def run(input_file, output_file, thread_number, resolution_finish,repeat_finish)
 	t = time.time()
 	exiting = 0
 	while (exiting <repeat_finish):
-		time.sleep(2.0)
+		time.sleep(0.5)
 		avg = [sum([d[i] for d in data])*1.0/thread_number for i in range(N)]
 		average_delta = sum([sqrt(sum([(d[i]-avg[i])**2 for i in range(N)])) for d in data])*1.0/thread_number
 		magnitude = sqrt(sum([avg[i]**2 for i in range(N)]))

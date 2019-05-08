@@ -1,5 +1,3 @@
-import sympy
-from sympy import diff, symbols
 import numpy as np
 from numpy.linalg import pinv
 import pdb
