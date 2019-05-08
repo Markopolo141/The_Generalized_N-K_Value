@@ -5,6 +5,7 @@ from multiprocessing import Process, Manager
 import time
 from math import sqrt
 from minimax_solver import setup, calc_maxmin_minmax, spruik_solver
+import gmpy2
 
 indsplus = None
 N = None
@@ -18,24 +19,23 @@ def v(s):
 		ii |= 1<<ss;
 	return 0.5*calc_maxmin_minmax(ii) + 0.5*indsplus
 
-#def v(s):
-#	return sqrt(sum(s))
-
-
 def worker(number,data,ppc):
-	m = 20
+	gmpy2.get_context().precision = 100
+	m = 1
 	setup(ppc)
 	temp_data = [[0 for i in range(N)] for i in range(N)]
-	mm = [[0.0 for i in range(N)] for ii in range(N)]
-	ss = [[0.0 for i in range(N)] for ii in range(N)]
+	mm = [[gmpy2.mpfr(0.0) for i in range(N)] for ii in range(N)]
+	ss = [[0 for i in range(N)] for ii in range(N)]
 	v0 = 0.0#v([])
 	vector = list(range(N))
 	while (True):
 		for i in range(0,m,N):
 			shuffle(vector)
 			prev_v = v0
+			if (int(random()*2)==0):
+				spruik_solver()
 			for ii,vv in enumerate(vector): #size ii, player vv
-				if (int(random()*4)==0):
+				if (int(random()*N*2)==0):
 					spruik_solver()
 				new_v = v(vector[0:ii+1])
 				x = new_v-prev_v
@@ -47,7 +47,7 @@ def worker(number,data,ppc):
 		for i in range(N):
 			for ii in range(N):
 				temp_data[i][ii] = mm[i][ii]/ss[i][ii] if ss[i][ii]>0 else 0
-		data[number] = [sum([temp_data[o][i] for o in range(N)])/N for i in range(N)]
+		data[number] = [float(sum([temp_data[o][i] for o in range(N)])/N) for i in range(N)]
 
 
 
@@ -83,8 +83,8 @@ def run(input_file, output_file, thread_number, resolution_finish,repeat_finish)
 		average_delta = sum([sqrt(sum([(d[i]-avg[i])**2 for i in range(N)])) for d in data])*1.0/thread_number
 		magnitude = sqrt(sum([avg[i]**2 for i in range(N)]))
 		magerror = average_delta*1.0/magnitude if magnitude != 0 else 1
-		#print "relative magnitude error: {}".format(magerror)
-		print "relative magnitude error: {} {}".format(magerror, data)
+		print "relative magnitude error: {}".format(magerror)
+		#print "relative magnitude error: {} {}".format(magerror, data)
 		if ((magerror<resolution_finish) or (magnitude==0)):
 			exiting += 1
 	

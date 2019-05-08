@@ -128,7 +128,8 @@ inline void Table::set(int c, int r, double v) {
 void Table::simplex_step(double* head, int max_int, double* best_improvement, int* best_improvement_index) {
 	*best_improvement=0;
 	*best_improvement_index = -1;
-	int smallest_out_column = -1;
+	unsigned int smallest_out_column = 0;
+	bool smallest_out_column_allocated = false;
 	for (int pivot_index=0; pivot_index < this->pivotable_number; pivot_index++) {
 		double head_value = head[this->pivotable_columns[pivot_index]];
 		if (head_value*max_int < 0) {
@@ -137,9 +138,10 @@ void Table::simplex_step(double* head, int max_int, double* best_improvement, in
 				*best_improvement = ratio;
 				*best_improvement_index = pivot_index;
 			} else if ((ratio==0) && (*best_improvement_index==-1)) { //bland's rule
-				if (smallest_out_column == -1) {
+				if (smallest_out_column_allocated == false) {
 					smallest_out_column = this->pivotable_columns[pivot_index];
 					*best_improvement_index = pivot_index;
+					smallest_out_column_allocated = true;
 				} else {
 					if (this->pivotable_columns[pivot_index] < smallest_out_column) {
 						smallest_out_column = this->pivotable_columns[pivot_index];
