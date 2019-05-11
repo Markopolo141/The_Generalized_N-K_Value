@@ -40,7 +40,6 @@ def get_matrix_formulation(raw_branches, busses):
 	mmm_strings = []
 	eq_constraints = []
 	le_constraints = []
-	print "ping"
 	for i in range(len(busses)):
 		terms = mmm[i,]
 		normaliser =  float_gcd(terms.tolist(),0.000001)
@@ -48,7 +47,6 @@ def get_matrix_formulation(raw_branches, busses):
 		if str(terms) not in mmm_strings:
 			eq_constraints.append(terms.tolist() +[0])
 			mmm_strings.append(str(terms))
-	print "pong"
 	for br in branches:
 		impedance = max(br[2],0.0000001)
 		terms = (mm[br[0]-1,] - mm[br[1]-1,])*impedance
@@ -58,7 +56,6 @@ def get_matrix_formulation(raw_branches, busses):
 		#br3 = br[3]
 		le_constraints.append((-terms).tolist() + [br3])
 		le_constraints.append(terms.tolist() + [br3])
-	print "pang"
 	return eq_constraints,le_constraints
 
 
@@ -101,7 +98,6 @@ def setup(ppc):
 	for i,e in enumerate(eq_constraints):
 		if False not in [ee<=0 for ee in e]:
 			eq_constraints[i] = [-ee for ee in eq_constraints[i]]
-	print "Pa-ping"
 	bilevel_solver.setup_solver(le_constraints,eq_constraints,[],costs)
 
 
