@@ -67,6 +67,7 @@ def proc_stop(p_to_stop):
 @click.argument('resolution_finish', type=click.FLOAT)
 @click.argument('repeat_finish', type=click.INT)
 def run(input_file, output_file, thread_number, resolution_finish,repeat_finish):
+	print "---START---"
 	global N
 	ppc = json.load(input_file)
 	N = len(ppc['bus'])

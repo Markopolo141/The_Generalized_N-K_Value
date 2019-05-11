@@ -5,7 +5,7 @@
 #define EPSILON 0.001
 
 #define DEBUG 0
-#define PRUNING 1
+#define PRUNING 0
 
 #include <utils.cpp>
 #include <solver.cpp>
