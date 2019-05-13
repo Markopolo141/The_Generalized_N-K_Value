@@ -31,7 +31,7 @@ def run(input_file, output_file):
 	print N
 	for d in data:
 		a = d[0]
-		for i in range(N-1):
+		for i in range(N):
 			if ((a>>i)&1)==1:
 				c = count_bits(a)
 				mm[c-1][i] += d[1]
