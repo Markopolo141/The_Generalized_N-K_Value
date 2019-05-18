@@ -149,6 +149,8 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printf("about to compute on coalition\n");
 	#endif
 	prev_min_table->simplex(temporary_head, true);
+	printf("zog = ");
+	prev_min_table->table_pivot_column_mask->print();
 	for (int i=0; i< t->w; i++) {
 		if (coalition.get_bit(i)==1) {
 			temporary_head[i] = -EPSILON * master_head[i];
@@ -160,6 +162,8 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printf("about to compute on anticoalition\n");
 	#endif
 	prev_max_table->simplex(temporary_head, true);
+	printf("zog = ");
+	prev_max_table->table_pivot_column_mask->print();
 
 	double coalition_value = 0;
 	double anticoalition_value = 0;
@@ -177,8 +181,10 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	}
 	prev_min_table->apply_to_head(temporary_head,temporary_head);
 	coalition_value += 0.5*temporary_head[t->w-1];
+	printf("A=%f\n",temporary_head[t->w-1]);
 	prev_max_table->apply_to_head(temporary_head,temporary_head);
 	coalition_value += 0.5*temporary_head[t->w-1];
+	printf("A=%f\n",temporary_head[t->w-1]);
 
 	for (int i=0; i< t->w; i++) {
 		if (coalition.get_bit(i)==1) {
@@ -189,8 +195,10 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	}
 	prev_min_table->apply_to_head(temporary_head,temporary_head);
 	anticoalition_value += 0.5*temporary_head[t->w-1];
+	printf("A=%f\n",temporary_head[t->w-1]);
 	prev_max_table->apply_to_head(temporary_head,temporary_head);
 	anticoalition_value += 0.5*temporary_head[t->w-1];
+	printf("A=%f\n",temporary_head[t->w-1]);
 
 	return PyFloat_FromDouble(coalition_value-anticoalition_value);
 }
