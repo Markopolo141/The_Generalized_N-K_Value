@@ -144,7 +144,7 @@ double Table::simplex(double* head, bool maximising) {
 		int smallest_out_column = -1;
 		for (int pivot_index=0; pivot_index < this->pivotable_number; pivot_index++) {
 			double head_value = head[this->pivotable_columns[pivot_index]];
-			if (head_value*max_int < 0) {
+			if ((head_value*max_int < 0)) {
 				double ratio = -max_int*head_value*this->pivotable_ratios[pivot_index];
 				if (ratio>best_improvement) {
 					best_improvement = ratio;
@@ -166,7 +166,7 @@ double Table::simplex(double* head, bool maximising) {
 			break;
 		new_mask.set(this->table_pivot_column_mask);
 		new_mask.flip_bit(this->pivotable_columns[best_improvement_index]);
-		if (this->pivotable_rows[best_improvement_index] != -1)
+		if (this->table_pivot_columns[best_improvement_index] != -1)
 			new_mask.flip_bit(this->table_pivot_columns[this->pivotable_rows[best_improvement_index]]);
 		if (masks->search(&new_mask)==true) // if degenerate cycling is occuring in context of bland's rule
 			break;
@@ -231,13 +231,13 @@ void Table::calculate_pivots(bool negatives) {
 					best_ratio = ratio;
 			}
 			// the following block allows -1,0 pivoting... *carefull*
-			else if ((v<0) && (right_value==0) && (negatives==true)) {
+			/*else if ((v<0) && (right_value==0) && (negatives==true)) {
 				this->pivotable_columns[this->pivotable_number] = i;
 				this->pivotable_rows[this->pivotable_number] = j;
 				this->pivotable_ratios[this->pivotable_number]=0.0;
 				this->pivotable_columns_mask->set_bit(i,1);
 				this->pivotable_number += 1;
-			}
+			}*/
 		}
 		for (unsigned int z=0; z<row_memory->length; z++) {// if there is a best row add the info to the datastructure
 			Row_iter* r = &(row_memory->memory[z]);
@@ -294,6 +294,7 @@ void Table::pivot(Table* t, int pivotable_index) {
 }
 
 void Table::pivot(Table* t, int column, int row) {
+	//printf("pivoting: column %i row %i\n",column,row);
 	double* pivot_row = &(t->data)[row*this->w];
 	double center = pivot_row[column];
 	if (t==this) {

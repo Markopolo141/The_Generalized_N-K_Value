@@ -98,6 +98,11 @@ def setup(ppc):
 	for i,e in enumerate(eq_constraints):
 		if False not in [ee<=0 for ee in e]:
 			eq_constraints[i] = [-ee for ee in eq_constraints[i]]
+	#print "LOADING CONSTRAINTS"
+	#print le_constraints
+	#print eq_constraints
+	#print costs
+	#print "DONE"
 	bilevel_solver.setup_solver(le_constraints,eq_constraints,[],costs)
 
 

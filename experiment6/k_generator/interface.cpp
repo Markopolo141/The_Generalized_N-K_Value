@@ -5,6 +5,7 @@
 #define EPSILON 0.001
 
 #define DEBUG 0
+#define ARTIF 1
 #define PRUNING 0
 
 #include <utils.cpp>
@@ -52,15 +53,17 @@ static PyObject* setup_solver(PyObject* self, PyObject* args) {
 	#endif
 	
 	// do simplex on artificial variables to determine initial feasible solution
-	#if DEBUG==1
-		printf("\nConducting Artificial variable simplex to get initial feasible solution:\n");
-	#endif
-	if (artificial_variables_simplex(t,artificial_variables) == false)
-		return NULL;
-	#if DEBUG==1
-		printf("Artificial variable simplex resulting in table:\n");
-		t->print();
-		t->print_pivot_info();
+	#if ARTIF==1
+		#if DEBUG==1
+			printf("\nConducting Artificial variable simplex to get initial feasible solution:\n");
+		#endif
+		if (artificial_variables_simplex(t,artificial_variables) == false)
+			return NULL;
+		#if DEBUG==1
+			printf("Artificial variable simplex resulting in table:\n");
+			t->print();
+			t->print_pivot_info();
+		#endif
 	#endif
 
 	// prune redundant columns/rows from the table representing redundant constraints
@@ -149,8 +152,7 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printf("about to compute on coalition\n");
 	#endif
 	prev_min_table->simplex(temporary_head, true);
-	printf("zog = ");
-	prev_min_table->table_pivot_column_mask->print();
+	
 	for (int i=0; i< t->w; i++) {
 		if (coalition.get_bit(i)==1) {
 			temporary_head[i] = -EPSILON * master_head[i];
@@ -162,8 +164,6 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 		printf("about to compute on anticoalition\n");
 	#endif
 	prev_max_table->simplex(temporary_head, true);
-	printf("zog = ");
-	prev_max_table->table_pivot_column_mask->print();
 
 	double coalition_value = 0;
 	double anticoalition_value = 0;
@@ -181,10 +181,8 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	}
 	prev_min_table->apply_to_head(temporary_head,temporary_head);
 	coalition_value += 0.5*temporary_head[t->w-1];
-	printf("A=%f\n",temporary_head[t->w-1]);
 	prev_max_table->apply_to_head(temporary_head,temporary_head);
 	coalition_value += 0.5*temporary_head[t->w-1];
-	printf("A=%f\n",temporary_head[t->w-1]);
 
 	for (int i=0; i< t->w; i++) {
 		if (coalition.get_bit(i)==1) {
@@ -195,10 +193,8 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 	}
 	prev_min_table->apply_to_head(temporary_head,temporary_head);
 	anticoalition_value += 0.5*temporary_head[t->w-1];
-	printf("A=%f\n",temporary_head[t->w-1]);
 	prev_max_table->apply_to_head(temporary_head,temporary_head);
 	anticoalition_value += 0.5*temporary_head[t->w-1];
-	printf("A=%f\n",temporary_head[t->w-1]);
 
 	return PyFloat_FromDouble(coalition_value-anticoalition_value);
 }

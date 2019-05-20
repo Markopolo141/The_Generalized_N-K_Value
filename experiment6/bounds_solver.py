@@ -41,9 +41,9 @@ def worker(number,data,ppc):
 				x = new_v-prev_v
 				prev_v = new_v
 				mm[ii][vv] += x
-				mm[N-ii-1][vv] += x
+				#mm[N-ii-1][vv] += x
 				ss[ii][vv] += 1
-				ss[N-ii-1][vv] += 1
+				#ss[N-ii-1][vv] += 1
 		for i in range(N):
 			for ii in range(N):
 				temp_data[i][ii] = mm[i][ii]/ss[i][ii] if ss[i][ii]>0 else 0

@@ -12,10 +12,10 @@ def create_model(debug=False):
 		print "import pyscipopt"
 		print "model=Model()"
 		print "model.setPresolve(pyscipopt.SCIP_PARAMSETTING.OFF)"
-		#print "model.disablePropagation()"
+		print "model.disablePropagation()"
 	model = Model()
 	model.setPresolve(pyscipopt.SCIP_PARAMSETTING.OFF)
-	#model.disablePropagation()
+	model.disablePropagation()
 	return model
 
 def add_constraint(model, expression, model_variables, debug=False):
@@ -53,13 +53,13 @@ def load_binary_variable(model, name, debug=False):
 	return v
 
 def set_objective(model, expression, variables, debug=False):
-	c = model.addVar("c", lb=-1e20, vtype = 'C')
-	model.setObjective(c, "minimize")
-	model.addCons(eval(str(expression), variables) <= c)
+	c = model.addVar("c", ub=1e20, lb=-1e20, vtype = 'C')
+	model.setObjective(c, "maximize")
+	model.addCons(eval(str(expression), variables) >= c)
 	if debug:
-		print "c = model.addVar(\"c\", lb=-1e20, vtype = 'C')"
-		print "model.setObjective(c, \"minimize\")"
-		print "model.addCons({} <= c)".format(str(expression))
+		print "c = model.addVar(\"c\", ub=1e20, lb=-1e20, vtype = 'C')"
+		print "model.setObjective(c, \"maximize\")"
+		print "model.addCons({} >= c)".format(str(expression))
 	return c
 	#if debug:
 	#	print 'model.setObjective({}, "minimize")'.format(str(expression))
@@ -163,7 +163,7 @@ def calc_LMP(ppc, debug=False):
 	set_objective(model, expression1, model_variables, debug=debug)
 	for g in power_constraints + angle_constraints:
 		constraints.append(add_constraint(model, "{}==0".format(str(g)), model_variables, debug=debug))
-	sol = model_optimise(model,debug=debug,maximizing=False)
+	sol = model_optimise(model,debug=debug,maximizing=True)
 	del model_variables['__builtins__']
 	model_variables_sympy = {symbols(name):model.getSolVal(sol,value) for name,value in model_variables.iteritems()}
 	substituted_costs = [c.subs(model_variables_sympy) for c in costs]
@@ -178,10 +178,12 @@ def calc_LMP(ppc, debug=False):
 	power_names = [p['name'] for p in defs if p['name'][0]=='p' and '_' not in p['name']]
 	dual_variables = [model.getDualsolLinear(constraints[i]) for i in range(len(power_constraints))]
 	power_variables = [model.getSolVal(sol,model_variables[p]) for p in power_names]
-	dollar_values = [dual_variables[i]*power_variables[i] for i in range(len(dual_variables))]
+	dollar_values = [-dual_variables[i]*power_variables[i] for i in range(len(dual_variables))]
 	consumption_utilities = [costs[i].subs({symbols(power_names[i]):power_variables[i],}) for i in range(len(power_names))]
 	#return dual_variables, dollar_values
-	return [dollar_values[i] - consumption_utilities[i] for i in range(len(dollar_values))]
+	return [dollar_values[i] + consumption_utilities[i] for i in range(len(dollar_values))]
+	#return [- consumption_utilities[i] for i in range(len(dollar_values))]
+	#return [dollar_values[i] for i in range(len(dollar_values))]
 
 
 
@@ -195,7 +197,8 @@ def run(input_file,output_file):
 	ppc = json.load(input_file)
 	N = len(ppc['bus'])
 	input_file.close()
-	r = [float(r) for r in calc_LMP(ppc)]
+	r = [float(r) for r in calc_LMP(ppc,False)]
+	print r
 	mag_r = sum([rr**2 for rr in r])
 	if mag_r>0:
 		output_file.write("{} {}\n".format(N,r))
