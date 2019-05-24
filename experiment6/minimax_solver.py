@@ -115,14 +115,12 @@ def break_down(a):
 	A.append(a)
 	return A
 
-#maxmin_minmax_call_count = 0
 def calc_maxmin_minmax(i):
-	#global maxmin_minmax_call_count
-	#maxmin_minmax_call_count += 1
-	#if (maxmin_minmax_call_count%9==0):
-	#	bilevel_solver.spruik()
-	#	pass
 	return bilevel_solver.solve(break_down(i))
+def calc_old_maxmin_minmax(i):
+	return bilevel_solver.solve_old(break_down(i))
+def new_calc_maxmin_minmax(i):
+	return bilevel_solver.new_solve(break_down(i))
 
 
 def spruik_solver():

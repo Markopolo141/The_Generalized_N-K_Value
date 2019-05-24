@@ -63,9 +63,11 @@ def run(n,k,name):
 	for i,bb in enumerate(b):
 		ppc['bus'].append([bb,-1,0])
 		if i<0:
-			ppc['gen'].append([bb, -1,-1,-1,-1,-1,-1,-1, 100, 0])
-			ppc['gencost'].append([2, 0, 0, 2, 0.0, 0])
-		elif random()>0.4:
+			#ppc['gen'].append([bb, -1,-1,-1,-1,-1,-1,-1, 1000, 0])
+			#ppc['gencost'].append([2, 0, 0, 2, -0.01, 0])
+			ppc['gen'].append([bb, -1,-1,-1,-1,-1,-1,-1, 0, -100])
+			ppc['gencost'].append([2, 0, 0, 2, 0.01, 0])
+		elif random()>0.6:
 			ppc['gen'].append([bb, -1,-1,-1,-1,-1,-1,-1, randint(10,15), 0])
 			ppc['gencost'].append([2, 0, 0, 2, -(randint(0,20)*0.1+0.1), 0])
 		else:

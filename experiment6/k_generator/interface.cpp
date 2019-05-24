@@ -102,7 +102,165 @@ static PyObject* setup_solver(PyObject* self, PyObject* args) {
 }
 
 
+static PyObject* new_new_solve(PyObject* self, PyObject* args) {
+	//TODO
+}
+
+
+static PyObject* new_solve(PyObject* self, PyObject* args) {
+	Mask player_mask, coalition, anticoalition;
+	player_mask.set_ones(players);
+	coalition.set_zero();
+
+	#if DEBUG==1
+		printf("parsing coalition\n");
+	#endif
+	
+	Py_ssize_t TupleSize = PyTuple_Size(args);
+	if(TupleSize != 1)
+		return python_error("You must supply one argument.");
+	PyObject *obj;
+	obj = PyTuple_GetItem(args,0);
+	int size = (int)PyList_Size(obj);
+	for (int i=0; i<size; i++) {
+		coalition.set_long(i, PyLong_AsUnsignedLong(PyNumber_Long(PyList_GetItem(obj,i))));
+	}
+	if (PyErr_Occurred()!= NULL)
+		return python_error("Error parsing input coalition to solve()...");
+
+	#if DEBUG==1
+		printf("SOLVING\n");
+	#endif
+
+	if (((~player_mask)&coalition).non_zero())
+		return python_error("coalition too big!");
+	anticoalition.set(player_mask);
+	anticoalition.func_xor(&coalition);
+	
+	#if DEBUG==1
+		printf("coalition: \t");
+		coalition.print();
+		printf("player_mask: \t");
+		player_mask.print();
+	#endif
+
+	#if DEBUG==1
+		printf("applying heads\n");
+	#endif
+	for (int i=0; i< t->w; i++) {
+		if (coalition.get_bit(i)==1) {
+			coalition_head[i] = -1*master_head[i];
+		} else if (anticoalition.get_bit(i)==1) {
+			coalition_head[i] = 100;
+		} else {
+			coalition_head[i] = 0;
+		}
+	}
+
+	#if DEBUG==1
+		printf("applying coalition\n");
+	#endif
+	coalition_table->simplex(coalition_head, true, NULL);
+
+	double coalition_value = 0;
+
+	#if DEBUG==1
+		printf("extracting results\n");
+	#endif
+	coalition_value += coalition_head[t->w-1];
+
+	return PyFloat_FromDouble(coalition_value);
+}
+
+
+
 static PyObject* solve(PyObject* self, PyObject* args) {
+	Mask player_mask, coalition, anticoalition;
+	player_mask.set_ones(players);
+	coalition.set_zero();
+
+	#if DEBUG==1
+		printf("parsing coalition\n");
+	#endif
+	
+	Py_ssize_t TupleSize = PyTuple_Size(args);
+	if(TupleSize != 1)
+		return python_error("You must supply one argument.");
+	PyObject *obj;
+	obj = PyTuple_GetItem(args,0);
+	int size = (int)PyList_Size(obj);
+	for (int i=0; i<size; i++) {
+		coalition.set_long(i, PyLong_AsUnsignedLong(PyNumber_Long(PyList_GetItem(obj,i))));
+	}
+	if (PyErr_Occurred()!= NULL)
+		return python_error("Error parsing input coalition to solve()...");
+
+	#if DEBUG==1
+		printf("SOLVING\n");
+	#endif
+
+	if (((~player_mask)&coalition).non_zero())
+		return python_error("coalition too big!");
+	anticoalition.set(player_mask);
+	anticoalition.func_xor(&coalition);
+	
+	#if DEBUG==1
+		printf("coalition: \t");
+		coalition.print();
+		printf("player_mask: \t");
+		player_mask.print();
+	#endif
+
+	#if DEBUG==1
+		printf("applying heads\n");
+	#endif
+	for (int i=0; i< t->w; i++) {
+		if (coalition.get_bit(i)==1) {
+			coalition_head[i] = -1*master_head[i];
+			anticoalition_head[i] = 0;
+		} else {
+			coalition_head[i] = 0;
+			anticoalition_head[i] = -1*master_head[i];
+		}
+	}
+
+	#if DEBUG==1
+		printf("applying coalition\n");
+	#endif
+	coalition_table->simplex(coalition_head, true, NULL);
+	#if DEBUG==1
+		printf("applying coalition backward\n");
+	#endif
+	coalition_table->simplex(anticoalition_head, true, &coalition);
+	#if DEBUG==1
+		printf("applying anticoalition\n");
+	#endif
+	anticoalition_table->simplex(anticoalition_head, true, NULL);
+	#if DEBUG==1
+		printf("applying anticoalition backward\n");
+	#endif
+	anticoalition_table->simplex(coalition_head, true, &anticoalition);
+
+	double coalition_value = 0;
+	double anticoalition_value = 0;
+
+	#if DEBUG==1
+		printf("extracting results\n");
+	#endif
+	coalition_table->apply_to_head(coalition_head,coalition_head);
+	coalition_value += 0.5*coalition_head[t->w-1];
+	anticoalition_table->apply_to_head(coalition_head,coalition_head);
+	coalition_value += 0.5*coalition_head[t->w-1];
+
+	coalition_table->apply_to_head(anticoalition_head,anticoalition_head);
+	anticoalition_value += 0.5*anticoalition_head[t->w-1];
+	anticoalition_table->apply_to_head(anticoalition_head,anticoalition_head);
+	anticoalition_value += 0.5*anticoalition_head[t->w-1];
+
+	return PyFloat_FromDouble(coalition_value-anticoalition_value);
+}
+
+static PyObject* solve_old(PyObject* self, PyObject* args) {
 	Mask player_mask, coalition;
 	player_mask.set_ones(players);
 	coalition.set_zero();
@@ -143,27 +301,27 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 
 	for (int i=0; i< t->w; i++) {
 		if (coalition.get_bit(i)==1) {
-			temporary_head[i] = -1*master_head[i];
+			coalition_head[i] = -1*master_head[i];
 		} else {
-			temporary_head[i] = -EPSILON * master_head[i];
+			coalition_head[i] = -EPSILON * master_head[i];
 		}
 	}
 	#if DEBUG==1
 		printf("about to compute on coalition\n");
 	#endif
-	prev_min_table->simplex(temporary_head, true);
+	coalition_table->simplex(coalition_head, true);
 	
 	for (int i=0; i< t->w; i++) {
 		if (coalition.get_bit(i)==1) {
-			temporary_head[i] = -EPSILON * master_head[i];
+			coalition_head[i] = -EPSILON * master_head[i];
 		} else {
-			temporary_head[i] = -1*master_head[i];
+			coalition_head[i] = -1*master_head[i];
 		}
 	}
 	#if DEBUG==1
 		printf("about to compute on anticoalition\n");
 	#endif
-	prev_max_table->simplex(temporary_head, true);
+	anticoalition_table->simplex(coalition_head, true);
 
 	double coalition_value = 0;
 	double anticoalition_value = 0;
@@ -174,34 +332,37 @@ static PyObject* solve(PyObject* self, PyObject* args) {
 
 	for (int i=0; i< t->w; i++) {
 		if (coalition.get_bit(i)==1) {
-			temporary_head[i] = -1*master_head[i];
+			coalition_head[i] = -1*master_head[i];
 		} else {
-			temporary_head[i] = 0;
+			coalition_head[i] = 0;
 		}
 	}
-	prev_min_table->apply_to_head(temporary_head,temporary_head);
-	coalition_value += 0.5*temporary_head[t->w-1];
-	prev_max_table->apply_to_head(temporary_head,temporary_head);
-	coalition_value += 0.5*temporary_head[t->w-1];
+	coalition_table->apply_to_head(coalition_head,coalition_head);
+	coalition_value += 0.5*coalition_head[t->w-1];
+	anticoalition_table->apply_to_head(coalition_head,coalition_head);
+	coalition_value += 0.5*coalition_head[t->w-1];
 
 	for (int i=0; i< t->w; i++) {
 		if (coalition.get_bit(i)==1) {
-			temporary_head[i] = 0;
+			coalition_head[i] = 0;
 		} else {
-			temporary_head[i] = -1*master_head[i];
+			coalition_head[i] = -1*master_head[i];
 		}
 	}
-	prev_min_table->apply_to_head(temporary_head,temporary_head);
-	anticoalition_value += 0.5*temporary_head[t->w-1];
-	prev_max_table->apply_to_head(temporary_head,temporary_head);
-	anticoalition_value += 0.5*temporary_head[t->w-1];
+	coalition_table->apply_to_head(coalition_head,coalition_head);
+	anticoalition_value += 0.5*coalition_head[t->w-1];
+	anticoalition_table->apply_to_head(coalition_head,coalition_head);
+	anticoalition_value += 0.5*coalition_head[t->w-1];
 
 	return PyFloat_FromDouble(coalition_value-anticoalition_value);
 }
 
+
+
+
 static PyObject* spruik(PyObject* self, PyObject* args) {
-	prev_max_table->load(t);
-	prev_min_table->load(t);
+	anticoalition_table->load(t);
+	coalition_table->load(t);
 	return PyFloat_FromDouble(1);
 }
 static PyObject* destroy(PyObject* self, PyObject* args) {
@@ -219,6 +380,10 @@ static PyMethodDef bilevel_solver_funcs[] = {
 	{"setup_solver", (PyCFunction)setup_solver, 
 		METH_VARARGS, setup_solver_docs},
 	{"solve", (PyCFunction)solve, 
+		METH_VARARGS, solve_docs},
+	{"solve_old", (PyCFunction)solve_old, 
+		METH_VARARGS, solve_docs},
+	{"new_solve", (PyCFunction)new_solve, 
 		METH_VARARGS, solve_docs},
 	{"spruik", (PyCFunction)spruik, 
 		METH_NOARGS, spruik_docs},

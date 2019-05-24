@@ -20,6 +20,7 @@ def gen_mask(n, f):
 	f.write('\tinline Mask operator&(const Mask& m) {{\n\t\tMask m2;\n\t\t{}\n\t\treturn m2;\n\t}}\n'.format("\n\t\t".join(["m2.A{} = (this->A{})&(m.A{});".format(i,i,i) for i in range(n)])))
 	f.write('\tinline Mask operator~() {{\n\t\tMask m2;\n\t\t{}\n\t\treturn m2;\n\t}}\n'.format("\n\t\t".join(["m2.A{} = ~(this->A{});".format(i,i) for i in range(n)])))
 	f.write('\tinline Mask operator^(const Mask& m) {{\n\t\tMask m2;\n\t\t{}\n\t\treturn m2;\n\t}}\n'.format("\n\t\t".join(["m2.A{} = (this->A{})^(m.A{});".format(i,i,i) for i in range(n)])))
+	f.write('\tinline void func_xor(Mask* m) {{\n\t\t{}\n\t\treturn;\n\t}}\n'.format("\n\t\t".join(["this->A{} = (this->A{})^(m->A{});".format(i,i,i) for i in range(n)])))
 	f.write('\tinline Mask operator|(const Mask& m) {{\n\t\tMask m2;\n\t\t{}\n\t\treturn m2;\n\t}}\n'.format("\n\t\t".join(["m2.A{} = (this->A{})|(m.A{});".format(i,i,i) for i in range(n)])))
 	f.write('\tinline void set_zero() {{\n\t\t{}\n\t}}\n'.format("\n\t\t".join(["this->A{} = 0;".format(i) for i in range(n)])))
 	f.write('\tinline void operator=(Mask* m) {{\n\t\t{}\n\t}}\n'.format("\n\t\t".join(["this->A{} = m->A{};".format(i,i) for i in range(n)])))

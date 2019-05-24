@@ -29,6 +29,7 @@ struct Table {
 	void calculate_pivots(bool negatives); // scan through the table and select all the viable pivot points
 	void pivot(Table* t, int pivotable_index); // given table t (which can be -this-) with its pivotable index, mutate this table to be the pivoted result
 	void pivot(Table* t, int column, int row); // given table t (which can be -this-) mutate this table to be pivoted by the row,column pivot point.
+	double simplex(double* head, bool maximising, Mask* column_exclusions); // conduct a full simplex to the table, while avoiding pivoting on column_exclusion columns (can be NULL)
 	double simplex(double* head, bool maximising); // conduct a full simplex to the table.
 
 	void print(); // print table itself
@@ -123,6 +124,72 @@ inline void Table::set(int c, int r, double v) {
 	need_to_recalculate_pivotable = true;
 }
 
+double Table::simplex(double* head, bool maximising, Mask* column_exclusions) {
+	//if (this->table_pivot_column_number != this->h)
+	//	printf("WARNING: simplex method on potentially badly formed table.\n");
+
+	int max_int = maximising==true ? 1 : -1;
+	this->calculate_pivots(false);
+	this->apply_to_head(head,head);
+	Mask_Memory* masks;
+	masks = (Mask_Memory*)calloc(sizeof(Mask_Memory),1);
+	masks->setup(MEMORY_INITIAL_SIZE);
+	double best_improvement;
+	int best_improvement_index;
+	Mask new_mask;
+
+	masks->add(this->table_pivot_column_mask, false);
+	while (true) {
+		best_improvement=0;
+		best_improvement_index = -1;
+		int smallest_out_column = -1;
+		for (int pivot_index=0; pivot_index < this->pivotable_number; pivot_index++) {
+			int pivotable_column = this->pivotable_columns[pivot_index];
+			if (
+				(column_exclusions == NULL) || 
+				((column_exclusions->get_bit(pivotable_column)==0) && 
+					(column_exclusions->get_bit(this->table_pivot_columns[this->pivotable_rows[pivot_index]])==0))
+			) {
+				double head_value = head[pivotable_column];
+				if ((head_value*max_int < 0)) {
+					double ratio = -max_int*head_value*this->pivotable_ratios[pivot_index];
+					if (ratio>best_improvement) {
+						best_improvement = ratio;
+						best_improvement_index = pivot_index;
+					} else if ((ratio==0) && (best_improvement==0)) { //bland's rule
+						//if (smallest_out_column == -1) {
+						//	smallest_out_column = this->table_pivot_columns[pivotable_rows[pivot_index]];
+							best_improvement_index = pivot_index;
+						//} else {
+						//	if (this->table_pivot_columns[pivotable_rows[pivot_index]] < smallest_out_column) {
+						//		smallest_out_column = this->table_pivot_columns[pivotable_rows[pivot_index]];
+						//		best_improvement_index = pivot_index;
+						//	}
+						//}
+					}
+				}
+			}
+		}
+		if (best_improvement_index==-1) // destinct optima attained
+			break;
+		new_mask.set(this->table_pivot_column_mask);
+		new_mask.flip_bit(this->pivotable_columns[best_improvement_index]);
+		if (this->table_pivot_columns[best_improvement_index] != -1)
+			new_mask.flip_bit(this->table_pivot_columns[this->pivotable_rows[best_improvement_index]]);
+		if (masks->search(&new_mask)==true) // if degenerate cycling is occuring in context of bland's rule
+			break;
+		this->pivot(this, best_improvement_index);
+		this->calculate_pivots(false);
+		this->apply_to_head(head,head);
+		masks->add(this->table_pivot_column_mask, false);
+	}
+	masks->destroy();
+	free(masks);
+	return head[this->w-1];
+}
+
+
+
 double Table::simplex(double* head, bool maximising) {
 	//if (this->table_pivot_column_number != this->h)
 	//	printf("WARNING: simplex method on potentially badly formed table.\n");
@@ -179,7 +246,6 @@ double Table::simplex(double* head, bool maximising) {
 	free(masks);
 	return head[this->w-1];
 }
-
 
 
 

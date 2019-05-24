@@ -6,31 +6,36 @@
 #include "table.cpp"
 
 Table* t = NULL;
-Table* prev_max_table = NULL;
-Table* prev_min_table = NULL;
+Table* anticoalition_table = NULL;
+Table* coalition_table = NULL;
 
 double* master_head = NULL;
-double* temporary_head = NULL;
+double* coalition_head = NULL;
+double* anticoalition_head = NULL;
 int players;
 
 void free_memory() {
-	if (prev_max_table != NULL) {
-		prev_max_table->free_data();
-		free(prev_max_table);
-		prev_max_table = NULL;
+	if (anticoalition_table != NULL) {
+		anticoalition_table->free_data();
+		free(anticoalition_table);
+		anticoalition_table = NULL;
 	}
-	if (prev_min_table != NULL) {
-		prev_min_table->free_data();
-		free(prev_min_table);
-		prev_min_table = NULL;
+	if (coalition_table != NULL) {
+		coalition_table->free_data();
+		free(coalition_table);
+		coalition_table = NULL;
 	}
 	if (master_head != NULL) {
 		free(master_head);
 		master_head = NULL;
 	}
-	if (temporary_head != NULL) {
-		free(temporary_head);
-		temporary_head = NULL;
+	if (coalition_head != NULL) {
+		free(coalition_head);
+		coalition_head = NULL;
+	}
+	if (anticoalition_head != NULL) {
+		free(anticoalition_head);
+		anticoalition_head = NULL;
 	}
 	if (t!=NULL) {
 		t->free_data();
@@ -41,14 +46,15 @@ void free_memory() {
 
 
 void setup_memory(Table* t) {
-	prev_max_table = (Table*)malloc(sizeof(Table));
-	prev_max_table->initialise(t->w,t->h);
-	prev_max_table->load(t);
-	prev_min_table = (Table*)malloc(sizeof(Table));
-	prev_min_table->initialise(t->w,t->h);
-	prev_min_table->load(t);
+	anticoalition_table = (Table*)malloc(sizeof(Table));
+	anticoalition_table->initialise(t->w,t->h);
+	anticoalition_table->load(t);
+	coalition_table = (Table*)malloc(sizeof(Table));
+	coalition_table->initialise(t->w,t->h);
+	coalition_table->load(t);
 	master_head = (double*)calloc(sizeof(double),t->w+1);
-	temporary_head = (double*)calloc(sizeof(double),t->w+1);
+	coalition_head = (double*)calloc(sizeof(double),t->w+1);
+	anticoalition_head = (double*)calloc(sizeof(double),t->w+1);
 }
 
 
@@ -56,7 +62,7 @@ bool artificial_variables_simplex(Table* t, int artificial_variables) {
 	double* head = (double*)calloc(sizeof(double),t->w);
 	for (int i=t->w-1-artificial_variables; i<t->w-1; i++)
 		head[i] = -1.0;
-	if (t->simplex(head,false)>TINY) {
+	if (t->simplex(head,false,NULL)>TINY) {
 		printf("ERROR: INFEASIBIILTY\n");
 		return false;
 	}
@@ -78,7 +84,7 @@ void equation_pruning(Table* t, int* slackness_columns) {
 				else
 					head[i]=0;
 			}
-			if (t->simplex(head,false)>TINY) {
+			if (t->simplex(head,false,NULL)>TINY) {
 				t->delete_row(jj);
 				t->delete_column(slackness_columns[j],NULL);
 				for (int jjj=0;jjj<original_h;jjj++)

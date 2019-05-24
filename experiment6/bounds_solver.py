@@ -4,20 +4,21 @@ import json
 from multiprocessing import Process, Manager
 import time
 from math import sqrt
-from minimax_solver import setup, calc_maxmin_minmax, spruik_solver
+from minimax_solver import setup, new_calc_maxmin_minmax, calc_maxmin_minmax, calc_old_maxmin_minmax, spruik_solver
 import gmpy2
 
 indsplus = None
 N = None
+method = None
 
 def v(s):
 	global indsplus
 	if indsplus is None:
-		indsplus = calc_maxmin_minmax((1<<N)-1)
+		indsplus = method((1<<N)-1)
 	ii = 0
 	for ss in s:
 		ii |= 1<<ss;
-	return 0.5*calc_maxmin_minmax(ii) + 0.5*indsplus
+	return 0.5*method(ii) + 0.5*indsplus
 
 def worker(number,data,ppc):
 	gmpy2.get_context().precision = 100
@@ -32,21 +33,18 @@ def worker(number,data,ppc):
 		for i in range(0,m,N):
 			shuffle(vector)
 			prev_v = v0
-			if (int(random()*2)==0):
-				spruik_solver()
+			spruik_solver()
 			for ii,vv in enumerate(vector): #size ii, player vv
-				if (int(random()*N*2)==0):
-					spruik_solver()
 				new_v = v(vector[0:ii+1])
 				x = new_v-prev_v
 				prev_v = new_v
 				mm[ii][vv] += x
-				#mm[N-ii-1][vv] += x
+				mm[N-ii-1][vv] += x
 				ss[ii][vv] += 1
-				#ss[N-ii-1][vv] += 1
+				ss[N-ii-1][vv] += 1
 		for i in range(N):
 			for ii in range(N):
-				temp_data[i][ii] = mm[i][ii]/ss[i][ii] if ss[i][ii]>0 else 0
+				temp_data[i][ii] = mm[i][ii]/ss[i][ii] if ss[i][ii]>0 else 0#indsplus*random()*2.0/N #random()*1000
 		data[number] = [float(sum([temp_data[o][i] for o in range(N)])/N) for i in range(N)]
 
 
@@ -67,11 +65,19 @@ def proc_stop(p_to_stop):
 @click.argument('resolution_finish', type=click.FLOAT)
 @click.argument('resolution_iterate', type=click.FLOAT)
 @click.argument('repeat_finish', type=click.INT)
-def run(input_file, output_file, thread_number, resolution_finish, resolution_iterate ,repeat_finish):
+@click.argument('mode')
+def run(input_file, output_file, thread_number, resolution_finish, resolution_iterate ,repeat_finish, mode):
 	print "---START---"
-	global N
+	global N, method
 	ppc = json.load(input_file)
 	N = len(ppc['bus'])
+	assert mode in ['newnew','new', 'old']
+	if mode=="newnew":
+		method = new_calc_maxmin_minmax
+	elif mode=="new":
+		method = calc_maxmin_minmax
+	elif mode=="old":
+		method = calc_old_maxmin_minmax
 	
 	manager = Manager()
 	data = manager.list([[i for ii in range(N)] for i in range(thread_number)])
@@ -90,6 +96,8 @@ def run(input_file, output_file, thread_number, resolution_finish, resolution_it
 			#print "relative magnitude error: {} {}".format(magerror, data)
 			if ((magerror<resolution_finish) or (magnitude==0)):
 				exiting += 1
+			else:
+				exiting = 0
 	except KeyboardInterrupt as e:
 		pass
 	

@@ -180,10 +180,9 @@ def calc_LMP(ppc, debug=False):
 	power_variables = [model.getSolVal(sol,model_variables[p]) for p in power_names]
 	dollar_values = [-dual_variables[i]*power_variables[i] for i in range(len(dual_variables))]
 	consumption_utilities = [costs[i].subs({symbols(power_names[i]):power_variables[i],}) for i in range(len(power_names))]
-	#return dual_variables, dollar_values
+	#print "dollar_values = {}".format(dollar_values)
+	#print "consumption_utilities = {}".format(consumption_utilities)
 	return [dollar_values[i] + consumption_utilities[i] for i in range(len(dollar_values))]
-	#return [- consumption_utilities[i] for i in range(len(dollar_values))]
-	#return [dollar_values[i] for i in range(len(dollar_values))]
 
 
 
@@ -198,7 +197,7 @@ def run(input_file,output_file):
 	N = len(ppc['bus'])
 	input_file.close()
 	r = [float(r) for r in calc_LMP(ppc,False)]
-	print r
+	#print r
 	mag_r = sum([rr**2 for rr in r])
 	if mag_r>0:
 		output_file.write("{} {}\n".format(N,r))
