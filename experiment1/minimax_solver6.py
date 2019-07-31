@@ -17,7 +17,7 @@ def create_model(debug=False):
 		print "model.setPresolve(pyscipopt.SCIP_PARAMSETTING.OFF)"
 		#print "model.disablePropagation()"
 	model = Model()
-	model.setPresolve(pyscipopt.SCIP_PARAMSETTING.OFF)
+	#model.setPresolve(pyscipopt.SCIP_PARAMSETTING.OFF)
 	#model.disablePropagation()
 	return model
 
@@ -411,6 +411,7 @@ if __name__ == "__main__":
 	#print sum([a[i]*b[i] for i in range(len(a))])
 	from pypower.case6www import case6www
 	print calculate_value(case6www(), debug=True, tqdm_show=True, bignum=9999)
+
 
 
 

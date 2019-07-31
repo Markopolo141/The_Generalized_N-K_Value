@@ -61,11 +61,11 @@ ppc['gen'] = ppc['gen'].astype(float)
 
 def simulate(ppc):
 	print ppc['gen'][0][8]
-	return calculate_value(ppc, debug=False, tqdm_show=False), calc_LMP(ppc, debug=False)
+	return calculate_value(ppc, debug=False, tqdm_show=False, bignum=999999), calc_LMP(ppc, debug=False)
 
 if __name__ == "__main__":
 	ppcs = []
-	for a,i in xxrange(0.1,380,0.2):
+	for a,i in xxrange(0.1,380,1.2):
 		ppc['gen'][0][8] = i
 		ppcs.append(copy(ppc))
 		xticks.append(i)
@@ -80,6 +80,7 @@ if __name__ == "__main__":
 			data[ii][5].append(results2[1][ii])
 	with open('data.json',"w") as f:
 		f.write(json.dumps({"data":data,"xticks":xticks}))
+
 
 
 
