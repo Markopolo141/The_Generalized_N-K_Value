@@ -1,0 +1,100 @@
+
+\RequirePackage{fix-cm}
+
+\documentclass{svjour3}                     % onecolumn (standard format)
+%\documentclass[smallcondensed]{svjour3}     % onecolumn (ditto)
+%\documentclass[smallextended]{svjour3}       % onecolumn (second format)
+%\documentclass[twocolumn]{svjour3}          % twocolumn
+\smartqed
+
+
+
+
+%% your usepackages here:
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{subcaption}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{tikzscale}
+\usepackage{stmaryrd}
+\usepackage{pgfplots}
+\usepackage{xcolor}
+\usepackage{graphicx}
+
+\usetikzlibrary{arrows.meta}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+\DeclareMathOperator*{\argmax}{\arg\!\max}
+\DeclareMathOperator{\E}{\mathbb{E}}
+\DeclareMathOperator{\p}{\mathbb{P}}
+\newcommand{\cc}[1]{\textcolor{red}{\textnormal{#1}}}
+
+\usetikzlibrary{external}
+\tikzexternalize[prefix=tikz/]
+
+
+% \journalname{myjournal}
+
+\begin{document}
+
+\title{The GNK Value}
+\subtitle{Coalitional and Bargaining based Electricity Surplus Allocation}
+%\titlerunning{Short form of title}        % if too long for running head
+\author{{Mark A. Burgess} \and {Archie C. Chapman} \and {Paul Scott}}
+\authorrunning{Burgess, Chapman, Scott} % if too long for running head
+\institute{Mark Alexander Burgess \at
+              Australian National University \\
+              College of Engineering \& Computer Science\\
+              Tel.: +6148162056\\
+              \email{mark.burgess@anu.edu.au} \\ 
+              \email{markburgess1989@gmail.com} \\           %  \\
+%             \emph{Present address:} of F. Author  %  if needed
+           \and
+           Archie C. Chapman \at
+              The University of Sydney \\
+              School of Electrical and Information Engineering \\
+              Tel.: +61286270386\\
+              \email{archie.chapman@sydney.edu.au} \\           %  \\
+%             \emph{Present address:} of F. Author  %  if needed
+           \and
+           Paul Scott \at
+              Australian National University \\
+              College of Engineering \& Computer Science\\
+              Tel.: +61400231040\\
+              \email{paul.scott@anu.edu.au} \\           %  \\
+%             \emph{Present address:} of F. Author  %  if needed
+}
+\date{Received: date / Accepted: date}
+% The correct dates will be entered by the editor
+\maketitle
+
+
+\begin{abstract}  % put your abstract here!
+We introduce a solution concept for generalized non-cooperative games called the \textit{generalized Neyman and Kohlberg value} (GNK value). 
+We then apply the GNK value as a cost allocation mechanism for determining payments between agents in electrical optimal power flow (OPF) instances.
+The GNK value provides a method of assigning value to agent's energy transfers that extends axiomatically from game theoretic solution concepts such as the Shapley Value and Nash-Bargaining solution.
+%We evaluate and compare the characteristics of the GNK value over locational marginal pricing (LMP) in the context of a test instance of an electrical network.
+%The GNK value contrasts against other solution concepts %is shown to be significantly different in nature than other allocation mechanisms locational marginal pricing (LMP), 
+%as it 
+In contradistinction to other solution concepts, the GNK value
+rewards electricity system participants in proportion to their coalitional competitive positions for monetary compensation within the network, while exhibiting budget-balancedness and continuity with network parameters.
+We illustrate with calculation on a small OPF instance under DC approximation, and then proceed to investigate techniques for overcoming the computational challenges applying GNK to larger instances.
+\keywords{Smart Grid \and Auctions and mechanism design \and 
+game theory for practical applications \and
+noncooperative games: theory \& analysis}
+\end{abstract}
+
+
+\input{body}
+
+%\bibliographystyle{spbasic}      % basic style, author-year citations
+\bibliographystyle{spmpsci}      % mathematics and physical sciences
+%\bibliographystyle{spphys}       % APS-like style for physics
+\bibliography{bib}
+\input{appendices}
+
+\end{document}

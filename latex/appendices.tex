@@ -1,0 +1,115 @@
+
+\appendix
+
+\section{Some Continuity and Monotonicity properties of the GNK value}
+
+From equations \ref{knvalue1} and \ref{da_value_eq} the GNK value is defined to be a summation over minimax terms and it should be evident that there is present some nice continuity properties:
+
+\begin{theorem}[GNK continuous with utilities]
+For utility functions $u_i(x,y)$ if we consider any bounded perturbations $\epsilon \Delta_i(x,y)$ of them, then the GNK value is continuous with $\epsilon$.
+\end{theorem}
+\begin{proof}
+To demonstrate that the GNK value is continuous with change in utility functions we consider utility perturbating functions $\Delta_i(x,y)$ with a magnitude $\max_{(x,y)\in A, i\in N}|\Delta_i(x,y)| = d$.
+For any coalition $S$, if we consider the advantage $v(S)$ with the original utility functions as $v_u(S)$ and with the perturbed utility function multiplied by a parameter $\epsilon$ as $v_{u+\epsilon \Delta}(S)$ then we can realise that:
+$$-n\epsilon d \le v_u(S)-v_{u+\epsilon \Delta}(S) \le n\epsilon d$$
+Therefore for any individual $i\in N$ the average over the advantage terms $v(S)$ for coalitions which include $i$ of size $k$ is similarly bounded.
+$$-n\epsilon d \le \frac{1}{\binom{n-1}{k-1}} \sum_{\substack{S:i\in S \\ |S|=k}}v_u(S)-\frac{1}{\binom{n-1}{k-1}} \sum_{\substack{S:i\in S \\ |S|=k}}v_{u+\epsilon \Delta}(S) \le n\epsilon d$$
+Therefore the average of these terms over sizes $k=1\dots n$ is also bounded.
+$$-n\epsilon d \le \frac{1}{n}\sum_{k=1}^n \frac{1}{\binom{n-1}{k-1}} \sum_{\substack{S:i\in S \\ |S|=k}}v_u(S)-\frac{1}{n}\sum_{k=1}^n \frac{1}{\binom{n-1}{k-1}} \sum_{\substack{S:i\in S \\ |S|=k}}v_{u+\epsilon \Delta}(S) \le n\epsilon d$$
+Which is the difference in the GNK value for an individual $i$ between the perturbed and unperturbed utility functions.
+Thus for any prospective utility perturbation $\Delta$ with a magnitude $d$ there is a $\delta$ ($=n\epsilon d$) such that there exists a perturbation factor $\epsilon$, such that if the utility functions are $\epsilon$ perturbed then the GNK value is $\delta$ bounded.
+\end{proof}
+
+The monotonicity properties that the GNK value has are partially inherited from its relation to the Shapley value.
+
+\begin{theorem}[GNK is monotonic]\label{thm:monotonicity}
+If we consider advantage functions $v$ and $v'$ and the GNK value with those advantage function $\varphi^v_i$ and $\varphi^{v'}_i$.
+Then for any individual $i\in N$, if all coalitions $S$ such that $i\in S$ it is true that $v'(S)\ge v(S)$ then $\varphi^{v'}_i \ge \varphi^v_i$.
+\end{theorem}
+\begin{proof}
+$$\varphi^v_i = \frac{1}{n}\sum_{k=1}^n \frac{1}{\binom{n-1}{k-1}} \sum_{\substack{S:i\in S \\ |S|=k}}v(S) \le \frac{1}{n}\sum_{k=1}^n \frac{1}{\binom{n-1}{k-1}} \sum_{\substack{S:i\in S \\ |S|=k}}v'(S) =\varphi^{v'}_i$$
+\end{proof}
+
+The question then becomes about what changes in utility functions and network constraints bring about this kind of conditions for monotonicity. The most direct case is shift invariance, which is inherited from nash bargaining roots \cite{nash2} and directly stated as an axiom in the case of the `coco' value \cite{kalai1}.
+
+\begin{theorem}[GNK is shift invariant]
+For any two utility profiles $u^1_i(x,y)$ and $u^2_i(x,y)$, and GNK defined by these utility profiles $\varphi_i^1$ and $\varphi_i^2$.
+Then for any individual $i\in N$, if $u_i^2(x,y) = u_i^1(x,y)+c$ for some constant $c$, and for all $j\neq i$ that $u^2_i(x,y) = u^1_i(x,y)$, then $\varphi_i^2 = \varphi_i^1+c$ 
+\end{theorem}
+\begin{proof}
+If we consider advantage functions $v_1$ and $v_2$ defined by utility functions $u_i(x,y)^1$ and $u_i(x,y)^2$ then for any coalition $S$ including individual $i$:
+\begin{align}
+v_2(S) = &
+\frac{1}{2}\min_{\substack{y\in A^{N\setminus S} \\ \text{s.t.}(x,y)\in A}} \left[
+\max_{\substack{x\in A^S \\ \text{s.t.}\exists y,(x,y)\in A}}
+	\left(\sum_{i\in S} u^1_i(x,y)+c - \sum_{i\in N\setminus S}u_i^2(x,y)\right)\right]\nonumber\\
+& +
+\frac{1}{2}\max_{\substack{x\in A^S \\ \text{s.t.}(x,y)\in A}} \left[
+\min_{\substack{y\in A^{N\setminus S} \\ \text{s.t.}\exists x,(x,y)\in A}}
+	\left(\sum_{i\in S} u^1_i(x,y)+c - \sum_{i\in N\setminus S} u_i^2(x,y) \right) \right]\nonumber\\
+&= v_1(S)+c\nonumber
+\end{align}
+The above step simply pulls the additive constant out of the max and min terms.
+Therefore for every coalition $S$ which includes individual $i$ of size $k$, $v_2(S)=v_1(S)+c$, therefore the average of these values over such coalitions has a similar relation.
+$$\frac{1}{\binom{n-1}{k-1}} \sum_{\substack{S:i\in S \\ |S|=k}}v_2(S) = \frac{1}{\binom{n-1}{k-1}} \sum_{\substack{S:i\in S \\ |S|=k}}v_1(S) + c$$
+therefore the average of these averages over sizes of coaltions $k=1\dots n$ is again similar:
+$$\frac{1}{n}\sum_{k=1}^n \frac{1}{\binom{n-1}{k-1}} \sum_{\substack{S:i\in S \\ |S|=k}}v_2(S) = \frac{1}{n}\sum_{k=1}^n \frac{1}{\binom{n-1}{k-1}} \sum_{\substack{S:i\in S \\ |S|=k}}v_2(S) + c$$
+which is to say that $\varphi_i^2 = \varphi_i^2+c$.
+\end{proof}
+
+Shift invariance is important but not particularly interesting property.
+So we also consider a very similar monotonicity property with regards to any utility perturbation that non-decreases a player's utility.
+
+\begin{theorem}[GNK is monotonic with increasing player utility]
+For any two utility profiles $u^1_i(x,y)$ and $u^2_i(x,y)$, and GNK values defined by these utility profiles: $\varphi_i^1$ and $\varphi_i^2$.
+Then for any individual $i\in N$, if $u_i^2(x,y) = u_i^1(x,y)+f(x,y)$ for some non-negative function $f$, and for all $j\neq i$ that $u^2_i(x,y) = u^1_i(x,y)$, then $\varphi_i^2 \ge \varphi_i^1$ 
+\end{theorem}
+\begin{proof}
+If we consider advantage functions $v_1$ and $v_2$ defined by utility functions $u_i^1(x,y)$ and $u_i^2(x,y)$ then for any coalition $S$ including individual $i$:
+\begin{align}
+v_2(S) = &
+\frac{1}{2}\min_{\substack{y\in A^{N\setminus S} \\ \text{s.t.}(x,y)\in A}} \left[
+\max_{\substack{x\in A^S \\ \text{s.t.}\exists y,(x,y)\in A}}
+	\left(\sum_{i\in S} u^1_i(x,y)+f(x,y) - \sum_{i\in N\setminus S}u_i^2(x,y)\right)\right]\nonumber\\
+& +
+\frac{1}{2}\max_{\substack{x\in A^S \\ \text{s.t.}(x,y)\in A}} \left[
+\min_{\substack{y\in A^{N\setminus S} \\ \text{s.t.}\exists x,(x,y)\in A}}
+	\left(\sum_{i\in S} u^1_i(x,y)+f(x,y) - \sum_{i\in N\setminus S} u_i^2(x,y) \right) \right]\nonumber\\
+&= v_1(S)+c\nonumber
+\end{align}
+If we pull out the inner maximisation and minimisation for the perturbed and unperturbed problems respectively, ie:
+$$ g_1(y) = 
+\max_{\substack{x\in A^S \\ \text{s.t.}\exists y,(x,y)\in A}}
+	\left(\sum_{i\in S} u^1_i(x,y)+f(x,y) - \sum_{i\in N\setminus S}u_i^2(x,y)\right)
+$$
+$$g_2(y) = 
+\max_{\substack{x\in A^S \\ \text{s.t.}\exists y,(x,y)\in A}}
+	\left(\sum_{i\in S} u^1_i(x,y) - \sum_{i\in N\setminus S}u_i^2(x,y)\right) $$
+$$h_1(x) = 
+\min_{\substack{y\in A^{N\setminus S} \\ \text{s.t.}\exists x,(x,y)\in A}}
+	\left(\sum_{i\in S} u^1_i(x,y)+f(x,y) - \sum_{i\in N\setminus S} u_i^2(x,y) \right)$$
+$$h_2(x) = 
+\min_{\substack{y\in A^{N\setminus S} \\ \text{s.t.}\exists x,(x,y)\in A}}
+	\left(\sum_{i\in S} u^1_i(x,y) - \sum_{i\in N\setminus S} u_i^2(x,y) \right)$$
+
+Now since $f(x,y)$ is non-negative therefore $g_1(y) \ge g_2(y)$ and $h_1(x) \ge h_2(x)$ irrespective of $x$ and $y$.
+therefore
+$$\min_{\substack{y\in A^{N\setminus S} \\ \text{s.t.}(x,y)\in A}}g_1(y) \ge \min_{\substack{y\in A^{N\setminus S} \\ \text{s.t.}(x,y)\in A}}g_2(y)$$
+$$\max_{\substack{x\in A^S \\ \text{s.t.}(x,y)\in A}}h_1(x) \ge \max_{\substack{x\in A^S \\ \text{s.t.}(x,y)\in A}}h_2(x)$$
+
+and thus:$$v_2(S) \ge v_1(S)$$
+And the result that $\varphi_i^2 \ge \varphi_i^1$ follows by monotonicity (theorem \ref{thm:monotonicity}).
+\end{proof}
+
+
+
+
+%\section{That the generalized N\&K value reduces to `the Value'}\label{appendix1}
+% \small
+%In order to prove that the generalized N\&K value reduces to `the Value' for normal-form (non-generalized) games. It is sufficient to demonstrate that for any $S\subseteq N$ that 
+%$v(S)$ from \eqref{knvalue1} is identical to $v_o(S)$ from \eqref{knvalue2} in that context.
+%$$v(S) = \frac{1}{2}v_o(S) - \frac{1}{2}v_o(N\setminus S)$$
+%N\&K have already shown that $v_o(S) = - v_o(N\setminus S)$ in the context of normal-form games, therefore:
+%$$v(S) = v_o(S)$$
+%Therefore the N\&K value reduces to `the Value' for normal-form (non-generalized) games.
+%\normalsize
